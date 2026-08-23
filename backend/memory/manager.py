@@ -12,7 +12,7 @@ from memory.database import (
 
 
 class MemoryManager:
-
+    #embedding阈值
     DUPLICATE_THRESHOLD = 0.90
     NEAR_DUPLICATE_THRESHOLD = 0.72
 
@@ -23,6 +23,7 @@ class MemoryManager:
         self,
         content,
         category="general",
+        memory_type="fact",
         source="inferred",
         confidence=1.0,
         importance=0.5,
@@ -44,6 +45,7 @@ class MemoryManager:
         memory_id = save_memory(
             content,
             category,
+            memory_type,
             source,
             confidence,
             importance,
@@ -72,12 +74,14 @@ class MemoryManager:
         self,
         memory_id,
         content,
-        category="general"
+        category="general",
+        memory_type="fact",
     ):
         update_memory(
             memory_id,
             content,
-            category
+            category,
+            memory_type
         )
         save_embedding(
             memory_id,
@@ -87,7 +91,12 @@ class MemoryManager:
 
 
     def delete(self, memory_id):
+        if isinstance(memory_id, dict):
+            memory_id = memory_id.get("id", memory_id.get("memory_id"))
+        if type(memory_id) is not int:
+            raise TypeError(f"Memory ID must be an integer, got {memory_id!r}")
         delete_memory(memory_id)
+
     def apply_consolidation(self, result):
 
         # 新增记忆
@@ -95,7 +104,8 @@ class MemoryManager:
 
             self.remember(
                 item["content"],
-                item.get("category", "general")
+                item.get("category", "general"),
+                memory_type=item.get("memory_type", "fact"),
             )
 
         # 修改记忆
@@ -104,7 +114,8 @@ class MemoryManager:
             self.update(
                 item["id"],
                 item["content"],
-                item.get("category", "general")
+                item.get("category", "general"),
+                item.get("memory_type", "fact"),
             )
 
         # 删除记忆
@@ -113,19 +124,25 @@ class MemoryManager:
         #合并记忆
         for item in result.get("merge", []):
             self.merge(
-                item["source_ids"],
+                [
+                    source["id"] if isinstance(source, dict) else source
+                    for source in item["source_ids"]
+                ],
                 item["content"],
-                item.get("category", "general")
+                item.get("category", "general"),
+                item.get("memory_type", "fact"),
             )
     def merge(
     self,
     source_ids,
     content,
-    category="general"
+    category="general",
+    memory_type="fact"
 ):
         result = self.remember(
             content,
-            category
+            category,
+            memory_type=memory_type
         )
         if result:
             for memory_id in source_ids:

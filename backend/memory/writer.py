@@ -19,6 +19,18 @@ MEMORY_SCHEMA = {
                 "goal"
             ]
         },
+        "memory_type": {
+            "type": "string",
+            "enum": [
+                "profile",
+                "preference",
+                "project",
+                "goal",
+                "state",
+                "event",
+                "fact"
+            ]
+        },
         "content": {
             "type": "string"
         }
@@ -26,6 +38,7 @@ MEMORY_SCHEMA = {
     "required": [
         "save",
         "category",
+        "memory_type",
         "content"
     ]
 }
@@ -60,25 +73,36 @@ class MemoryWriter:
 
 规则：
 
-1. 必须包含 save、category、content 三个字段。
+1. 必须包含 save、category、memory_type、content 四个字段。
 2. save 必须是 true 或 false。
 3. category 只能是：
    - general
    - preference
    - project
    - goal
-4. content 必须是用户原话中的最小事实片段，尽量逐字摘录。
-5. 不得补充、推测、总结或扩写用户没有表达的信息。
-6. 如果 save=false，content 可以为空字符串。
-7. 不要输出 Markdown。
-8. 不要输出解释文字。
+4. content 必须是从用户消息中提炼出的简洁、稳定、可检索的事实陈述。
+   允许改写语序、去掉口语和时间填充词，但不得改变事实含义，也不得添加
+   用户没有表达的信息。优先使用“用户……”的统一表述，便于数据库管理和
+   语义去重。例如“我希望以后都使用中文回答”应写成“用户偏好使用中文回答”。
+5. memory_type 必须准确反映记忆生命周期：profile/profile事实、preference偏好、
+   project项目、goal目标、state可被新信息覆盖的当前状态、event一次性事件、fact普通事实。
+   category 只能使用前面列出的四个值，个人身份信息也必须使用 category=general。
+6. 不得补充、推测、总结或扩写用户没有表达的信息。
+   用户提出问题不等于提供了事实。例如“我叫什么名字？”不能生成姓名记忆，
+   必须 save=false，除非同一条消息明确给出了姓名。
+7. 如果 save=false，content 必须为空字符串。
+8. 不要输出 Markdown。
+9. 不要输出解释文字。
 
 示例：
 用户：我叫安睿康。
-输出：{"save":true,"category":"general","content":"我叫安睿康"}
+输出：{"save":true,"category":"general","memory_type":"profile","content":"用户姓名是安睿康"}
+
+用户：我希望以后都使用中文回答。
+输出：{"save":true,"category":"preference","memory_type":"preference","content":"用户偏好使用中文回答"}
 
 用户：今天天气不错，帮我写一句问候。
-输出：{"save":false,"category":"general","content":""}
+输出：{"save":false,"category":"general","memory_type":"fact","content":""}
 """
 
         return [
@@ -91,6 +115,16 @@ class MemoryWriter:
                 "content": message
             }
         ]
+
+    @staticmethod
+    def _is_fact_question(message):
+        question_patterns = (
+            "我叫什么",
+            "我的名字是什么",
+            "你知道我叫什么",
+            "记得我叫什么",
+        )
+        return any(pattern in message for pattern in question_patterns)
 
     def _clean_json(self, raw):
 
@@ -129,15 +163,28 @@ class MemoryWriter:
         result = json.loads(cleaned)
         if not isinstance(result, dict):
             raise TypeError("MemoryWriter output must be an object")
-        required = {"save", "category", "content"}
+        required = {"save", "category", "memory_type", "content"}
         if set(result) != required:
             raise ValueError("MemoryWriter output has invalid fields")
         if type(result["save"]) is not bool:
             raise TypeError("save must be boolean")
+        if result["category"] == "profile":
+            result["category"] = "general"
         if result["category"] not in {
             "general", "preference", "project", "goal"
         }:
             raise ValueError("category is invalid")
+        if result["memory_type"] == "general":
+            result["memory_type"] = (
+                "profile"
+                if any(term in result["content"] for term in ("姓名", "名字", "用户名"))
+                else "fact"
+            )
+        if result["memory_type"] not in {
+            "profile", "preference", "project", "goal",
+            "state", "event", "fact"
+        }:
+            raise ValueError("memory_type is invalid")
         if not isinstance(result["content"], str):
             raise TypeError("content must be string")
         if result["save"] and not result["content"].strip():
@@ -147,6 +194,13 @@ class MemoryWriter:
         return result
 
     def analyze(self, message):
+        if self._is_fact_question(message):
+            return {
+                "save": False,
+                "category": "general",
+                "memory_type": "fact",
+                "content": "",
+            }
 
         messages = self._build_messages(message)
 

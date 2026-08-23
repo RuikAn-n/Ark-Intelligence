@@ -1,6 +1,12 @@
 local:
   provider: ollama
   model: qwen3.5:9b-mlx
+  feedback_model: qwen3.5:4b-mlx
+  feedback_enabled: true
+  feedback_timeout_seconds: 8
+  feedback_similarity_threshold: 0.88
+  memory_relevance_threshold: 0.20
+  think: true
 
 cloud:
   enabled: false

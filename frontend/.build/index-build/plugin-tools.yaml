@@ -1,0 +1,47 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "ArkIntelligence-arm64-apple-macosx-debug.module": ["<ArkIntelligence-arm64-apple-macosx-debug.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<ArkIntelligence-arm64-apple-macosx-debug.module>"]
+  "test": ["<ArkIntelligence-arm64-apple-macosx-debug.module>"]
+default: "main"
+nodes:
+  "/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/ArkIntelligence.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/App/AppState.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/App/ArkIntelligenceApp.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/ContentView.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Models/Models.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Networking/APIClient.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Networking/APIEndpoint.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Repositories/Repositories.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Services/MockRepositories.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Services/VoiceService.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Chat/ChatView.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Chat/ChatViewModel.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/History/HistoryViews.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Memory/MemoryViewModel.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Memory/MemoryViews.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Skills/SkillViews.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Voice/VoiceViews.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Preview/MockData.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Shared/Components/StateViews.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Shared/Styles/Theme.swift"]
+    outputs: ["/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/ArkIntelligence.build/sources"]
+    description: "Write auxiliary file /Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/ArkIntelligence.build/sources"
+
+  "/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+
+  "<ArkIntelligence-arm64-apple-macosx-debug.module>":
+    tool: phony
+    inputs: ["/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/Modules/ArkIntelligence.swiftmodule"]
+    outputs: ["<ArkIntelligence-arm64-apple-macosx-debug.module>"]
+
+  "C.ArkIntelligence-arm64-apple-macosx-debug.module":
+    tool: shell
+    inputs: ["/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/App/AppState.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/App/ArkIntelligenceApp.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/ContentView.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Models/Models.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Networking/APIClient.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Networking/APIEndpoint.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Repositories/Repositories.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Services/MockRepositories.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Core/Services/VoiceService.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Chat/ChatView.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Chat/ChatViewModel.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/History/HistoryViews.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Memory/MemoryViewModel.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Memory/MemoryViews.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Skills/SkillViews.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Features/Voice/VoiceViews.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Preview/MockData.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Shared/Components/StateViews.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/Shared/Styles/Theme.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/ArkIntelligence.build/sources"]
+    outputs: ["/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/Modules/ArkIntelligence.swiftmodule"]
+    description: "Compiling Swift Module 'ArkIntelligence' (19 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","ArkIntelligence","-emit-dependencies","-emit-module","-emit-module-path","/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/Modules/ArkIntelligence.swiftmodule","-output-file-map","/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/ArkIntelligence.build/output-file-map.json","-incremental","@/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/ArkIntelligence.build/sources","-I","/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-Onone","-enable-testing","-j15","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/anruikang/Documents/Ark-Intelligence/frontend/.build/index-build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","ArkIntelligence_main","-swift-version","6","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","frontend"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/anruikang/Documents/Ark-Intelligence/frontend/ArkIntelligence/","/Users/anruikang/Documents/Ark-Intelligence/frontend/Package.swift","/Users/anruikang/Documents/Ark-Intelligence/frontend/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+
