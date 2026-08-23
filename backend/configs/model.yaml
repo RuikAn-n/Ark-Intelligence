@@ -1,0 +1,6 @@
+local:
+  provider: ollama
+  model: qwen3.5:9b-mlx
+
+cloud:
+  enabled: false
