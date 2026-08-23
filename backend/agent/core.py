@@ -140,6 +140,7 @@ class ArkAgent:
                 self.memory.remember(
                     memory_result["content"],
                     memory_result["category"],
+                    memory_type=memory_result["memory_type"],
                     source="inferred",
                 )
 

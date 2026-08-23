@@ -19,6 +19,18 @@ MEMORY_SCHEMA = {
                 "goal"
             ]
         },
+        "memory_type": {
+            "type": "string",
+            "enum": [
+                "profile",
+                "preference",
+                "project",
+                "goal",
+                "state",
+                "event",
+                "fact"
+            ]
+        },
         "content": {
             "type": "string"
         }
@@ -26,6 +38,7 @@ MEMORY_SCHEMA = {
     "required": [
         "save",
         "category",
+        "memory_type",
         "content"
     ]
 }
@@ -60,7 +73,7 @@ class MemoryWriter:
 
 规则：
 
-1. 必须包含 save、category、content 三个字段。
+1. 必须包含 save、category、memory_type、content 四个字段。
 2. save 必须是 true 或 false。
 3. category 只能是：
    - general
@@ -68,17 +81,20 @@ class MemoryWriter:
    - project
    - goal
 4. content 必须是用户原话中的最小事实片段，尽量逐字摘录。
-5. 不得补充、推测、总结或扩写用户没有表达的信息。
-6. 如果 save=false，content 可以为空字符串。
-7. 不要输出 Markdown。
-8. 不要输出解释文字。
+5. memory_type 必须准确反映记忆生命周期：profile/profile事实、preference偏好、
+   project项目、goal目标、state可被新信息覆盖的当前状态、event一次性事件、fact普通事实。
+   category 只能使用前面列出的四个值，个人身份信息也必须使用 category=general。
+6. 不得补充、推测、总结或扩写用户没有表达的信息。
+7. 如果 save=false，content 必须为空字符串。
+8. 不要输出 Markdown。
+9. 不要输出解释文字。
 
 示例：
 用户：我叫安睿康。
-输出：{"save":true,"category":"general","content":"我叫安睿康"}
+输出：{"save":true,"category":"general","memory_type":"profile","content":"我叫安睿康"}
 
 用户：今天天气不错，帮我写一句问候。
-输出：{"save":false,"category":"general","content":""}
+输出：{"save":false,"category":"general","memory_type":"fact","content":""}
 """
 
         return [
@@ -129,15 +145,22 @@ class MemoryWriter:
         result = json.loads(cleaned)
         if not isinstance(result, dict):
             raise TypeError("MemoryWriter output must be an object")
-        required = {"save", "category", "content"}
+        required = {"save", "category", "memory_type", "content"}
         if set(result) != required:
             raise ValueError("MemoryWriter output has invalid fields")
         if type(result["save"]) is not bool:
             raise TypeError("save must be boolean")
+        if result["category"] == "profile":
+            result["category"] = "general"
         if result["category"] not in {
             "general", "preference", "project", "goal"
         }:
             raise ValueError("category is invalid")
+        if result["memory_type"] not in {
+            "profile", "preference", "project", "goal",
+            "state", "event", "fact"
+        }:
+            raise ValueError("memory_type is invalid")
         if not isinstance(result["content"], str):
             raise TypeError("content must be string")
         if result["save"] and not result["content"].strip():

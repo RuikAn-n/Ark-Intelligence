@@ -23,6 +23,7 @@ class MemoryManager:
         self,
         content,
         category="general",
+        memory_type="fact",
         source="inferred",
         confidence=1.0,
         importance=0.5,
@@ -44,6 +45,7 @@ class MemoryManager:
         memory_id = save_memory(
             content,
             category,
+            memory_type,
             source,
             confidence,
             importance,
@@ -72,12 +74,14 @@ class MemoryManager:
         self,
         memory_id,
         content,
-        category="general"
+        category="general",
+        memory_type="fact",
     ):
         update_memory(
             memory_id,
             content,
-            category
+            category,
+            memory_type
         )
         save_embedding(
             memory_id,
@@ -95,7 +99,8 @@ class MemoryManager:
 
             self.remember(
                 item["content"],
-                item.get("category", "general")
+                item.get("category", "general"),
+                memory_type=item.get("memory_type", "fact"),
             )
 
         # 修改记忆
@@ -104,7 +109,8 @@ class MemoryManager:
             self.update(
                 item["id"],
                 item["content"],
-                item.get("category", "general")
+                item.get("category", "general"),
+                item.get("memory_type", "fact"),
             )
 
         # 删除记忆
@@ -115,17 +121,20 @@ class MemoryManager:
             self.merge(
                 item["source_ids"],
                 item["content"],
-                item.get("category", "general")
+                item.get("category", "general"),
+                item.get("memory_type", "fact"),
             )
     def merge(
     self,
     source_ids,
     content,
-    category="general"
+    category="general",
+    memory_type="fact"
 ):
         result = self.remember(
             content,
-            category
+            category,
+            memory_type=memory_type
         )
         if result:
             for memory_id in source_ids:

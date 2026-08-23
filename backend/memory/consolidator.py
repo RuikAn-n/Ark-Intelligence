@@ -7,12 +7,47 @@ class MemoryConsolidator:
     def __init__(self):
 
         self.model = "qwen3.5:9b-mlx"
+        memory_fields = {
+            "type": "object",
+            "properties": {
+                "category": {"type": "string"},
+                "memory_type": {"type": "string"},
+                "content": {"type": "string"},
+            },
+            "required": ["category", "memory_type", "content"],
+        }
         self.schema = {
             "type": "object",
             "properties": {
-                "add": {"type": "array"},
-                "update": {"type": "array"},
-                "merge": {"type": "array"},
+                "add": {"type": "array", "items": memory_fields},
+                "update": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "integer"},
+                            **memory_fields["properties"],
+                        },
+                        "required": ["id", *memory_fields["required"]],
+                    },
+                },
+                "merge": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "source_ids": {
+                                "type": "array",
+                                "items": {"type": "integer"},
+                            },
+                            **memory_fields["properties"],
+                        },
+                        "required": [
+                            "source_ids",
+                            *memory_fields["required"],
+                        ],
+                    },
+                },
                 "delete": {"type": "array", "items": {"type": "integer"}},
             },
             "required": ["add", "update", "merge", "delete"],
@@ -75,6 +110,7 @@ class MemoryConsolidator:
     "add": [
         {
             "category": "general",
+            "memory_type": "fact",
             "content": "..."
         }
     ],
@@ -82,6 +118,7 @@ class MemoryConsolidator:
         {
             "id": 1,
             "category": "general",
+            "memory_type": "state",
             "content": "..."
         }
     ],
@@ -89,6 +126,7 @@ class MemoryConsolidator:
         {
             "source_ids": [2, 3],
             "category": "project",
+            "memory_type": "project",
             "content": "..."
         }
     ],
@@ -124,4 +162,12 @@ class MemoryConsolidator:
             repr(raw)
         )
 
-        return json.loads(raw)
+        result = json.loads(raw)
+        if not isinstance(result, dict):
+            raise ValueError("Consolidator output must be an object")
+        required = {"add", "update", "merge", "delete"}
+        if set(result) != required:
+            raise ValueError("Consolidator output has invalid fields")
+        if any(not isinstance(result[key], list) for key in required):
+            raise ValueError("Consolidator operation fields must be arrays")
+        return result

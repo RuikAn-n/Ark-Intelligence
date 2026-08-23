@@ -28,6 +28,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 content TEXT NOT NULL,
                 category TEXT NOT NULL DEFAULT 'general',
+                memory_type TEXT NOT NULL DEFAULT 'fact',
                 source TEXT NOT NULL DEFAULT 'inferred',
                 confidence REAL NOT NULL DEFAULT 1.0,
                 importance REAL NOT NULL DEFAULT 0.5,
@@ -45,6 +46,7 @@ def init_db():
         migrations = {
             "category": "TEXT NOT NULL DEFAULT 'general'",
             "source": "TEXT NOT NULL DEFAULT 'inferred'",
+            "memory_type": "TEXT NOT NULL DEFAULT 'fact'",
             "confidence": "REAL NOT NULL DEFAULT 1.0",
             "importance": "REAL NOT NULL DEFAULT 0.5",
             "status": "TEXT NOT NULL DEFAULT 'active'",
@@ -81,6 +83,7 @@ def init_db():
 def save_memory(
     content,
     category="general",
+    memory_type="fact",
     source="inferred",
     confidence=1.0,
     importance=0.5,
@@ -103,13 +106,14 @@ def save_memory(
         cursor = conn.execute(
             """
             INSERT INTO memories
-            (content, category, source, confidence, importance, status,
+            (content, category, memory_type, source, confidence, importance, status,
              created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)
             """,
             (
                 content,
                 category,
+                memory_type,
                 source,
                 confidence,
                 importance,
@@ -153,7 +157,8 @@ def get_memories_with_embeddings():
     with _connect() as conn:
         rows = conn.execute(
             """
-            SELECT m.id, m.content, m.category, m.created_at,
+            SELECT m.id, m.content, m.category, m.memory_type,
+                   m.importance, m.confidence, m.created_at,
                    e.model, e.vector
             FROM memories AS m
             LEFT JOIN memory_embeddings AS e ON e.memory_id = m.id
@@ -166,6 +171,9 @@ def get_memories_with_embeddings():
                 "id": row["id"],
                 "content": row["content"],
                 "category": row["category"],
+                "memory_type": row["memory_type"],
+                "importance": row["importance"],
+                "confidence": row["confidence"],
                 "created_at": row["created_at"],
                 "model": row["model"],
                 "vector": json.loads(row["vector"])
@@ -176,7 +184,7 @@ def get_memories_with_embeddings():
         ]
 
 
-def update_memory(memory_id, content, category="general"):
+def update_memory(memory_id, content, category="general", memory_type="fact"):
     content = content.strip()
     if not content:
         raise ValueError("Memory content cannot be empty")
@@ -184,10 +192,10 @@ def update_memory(memory_id, content, category="general"):
         cursor = conn.execute(
             """
             UPDATE memories
-            SET content = ?, category = ?, updated_at = ?
+            SET content = ?, category = ?, memory_type = ?, updated_at = ?
             WHERE id = ? AND status = 'active'
             """,
-            (content, category, _now(), memory_id),
+            (content, category, memory_type, _now(), memory_id),
         )
         if cursor.rowcount != 1:
             raise ValueError(f"Active memory {memory_id} does not exist")
@@ -198,6 +206,18 @@ def delete_memory(memory_id):
         conn.execute(
             """
             UPDATE memories SET status = 'deleted', updated_at = ?
+            WHERE id = ? AND status = 'active'
+            """,
+            (_now(), memory_id),
+        )
+
+
+def touch_memory(memory_id):
+    with _connect() as conn:
+        conn.execute(
+            """
+            UPDATE memories
+            SET last_accessed_at = ?
             WHERE id = ? AND status = 'active'
             """,
             (_now(), memory_id),
