@@ -19,7 +19,7 @@ struct ModelInfo: Codable, Hashable {
 }
 
 enum MemorySource: String, Codable, CaseIterable {
-    case retrieval, semantic, keyword, manual, system
+    case retrieval, semantic, keyword, manual, system, inferred, explicit
 }
 
 enum MemoryCategory: String, Codable, CaseIterable, Identifiable {
@@ -43,7 +43,7 @@ enum MemoryManagerFilter: Hashable, Identifiable {
 }
 
 struct MemoryItem: Identifiable, Codable, Hashable {
-    let id: UUID
+    let id: Int
     var content: String
     var category: MemoryCategory
     var source: MemorySource
@@ -68,11 +68,35 @@ struct ChatStreamEvent: Codable {
     let stage: Int?
     let content: String?
     let error: String?
+    let items: [RetrievedMemory]?
 
     enum CodingKeys: String, CodingKey {
         case event, model, stage, content, error
         case requestID = "request_id"
+        case items
     }
+}
+
+struct SessionEndResponse: Decodable {
+    let status: String
+}
+
+struct RetrievedMemory: Codable, Hashable, Identifiable {
+    let id: Int
+    let content: String
+    let category: MemoryCategory
+    let source: MemorySource
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(Int.self, forKey: .id) ?? 0
+        content = try container.decode(String.self, forKey: .content)
+        let categoryValue = try container.decodeIfPresent(String.self, forKey: .category) ?? "general"
+        category = MemoryCategory(rawValue: categoryValue.capitalized) ?? .general
+        source = try container.decodeIfPresent(MemorySource.self, forKey: .source) ?? .retrieval
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, content, category, source }
 }
 
 struct ConversationRecord: Identifiable, Codable, Hashable {

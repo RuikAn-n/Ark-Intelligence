@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct ContentView: View {
     @ObservedObject var appState: AppState
@@ -34,11 +35,30 @@ struct ContentView: View {
             switch selection ?? .chat {
             case .chat: ChatView(viewModel: appState.chatViewModel)
             case .voice: VoiceConversationView(viewModel: appState.voiceViewModel)
-            case .memoryOverview: MemoryOverviewView(viewModel: appState.memoryViewModel)
+            case .memoryOverview: MemoryOverviewView(memories: appState.chatViewModel.currentRetrievedMemories)
             case .memoryManager: MemoryManagerView(viewModel: appState.memoryViewModel)
             case .history: ConversationHistoryView(viewModel: appState.historyViewModel)
             case .skills: SkillListView(viewModel: appState.skillViewModel)
             }
+        }
+        .background(WindowActivationView())
+    }
+}
+
+private struct WindowActivationView: NSViewRepresentable {
+    func makeNSView(context: Context) -> ActivationView {
+        ActivationView()
+    }
+
+    func updateNSView(_ nsView: ActivationView, context: Context) {}
+
+    final class ActivationView: NSView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard let window else { return }
+            NSApp.setActivationPolicy(.regular)
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
 }

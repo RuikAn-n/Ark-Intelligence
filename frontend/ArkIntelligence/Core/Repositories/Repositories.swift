@@ -3,12 +3,13 @@ import Foundation
 @MainActor
 protocol ChatRepository {
     func streamMessage(_ message: String) -> AsyncThrowingStream<ChatStreamEvent, Error>
+    func endSession() async throws -> SessionEndResponse
 }
 
 @MainActor
 protocol MemoryRepository {
     func fetchMemories() async throws -> [MemoryItem]
-    func createMemory(_ memory: MemoryItem) async throws
+    func createMemory(_ memory: MemoryItem) async throws -> MemoryItem
     func updateMemory(_ memory: MemoryItem) async throws
     func softDeleteMemory(_ memory: MemoryItem) async throws
     func permanentlyDeleteMemory(_ memory: MemoryItem) async throws

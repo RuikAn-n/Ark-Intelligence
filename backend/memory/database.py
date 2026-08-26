@@ -153,6 +153,26 @@ def get_memories_with_category():
         ]
 
 
+def get_all_memories(include_deleted=False):
+    with _connect() as conn:
+        query = """
+            SELECT id, content, category, memory_type, source, confidence,
+                   importance, status, created_at, updated_at, last_accessed_at
+            FROM memories
+        """
+        if not include_deleted:
+            query += " WHERE status = 'active'"
+        query += " ORDER BY id"
+        return [dict(row) for row in conn.execute(query)]
+
+
+def delete_memory_permanently(memory_id):
+    with _connect() as conn:
+        cursor = conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+        if cursor.rowcount != 1:
+            raise ValueError(f"Memory {memory_id} does not exist")
+
+
 def get_memories_with_embeddings():
     with _connect() as conn:
         rows = conn.execute(

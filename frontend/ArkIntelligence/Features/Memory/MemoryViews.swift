@@ -1,23 +1,22 @@
 import SwiftUI
 
 struct MemoryOverviewView: View {
-    @ObservedObject var viewModel: MemoryViewModel
+    let memories: [MemoryItem]
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("当前对话调用的记忆").font(.title2.bold())
-            if viewModel.filteredMemories.isEmpty {
+            if memories.isEmpty {
                 EmptyStateView(title: "暂无记忆", systemImage: "brain")
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
-                        ForEach(viewModel.filteredMemories) { memory in MemoryCard(memory: memory) }
+                        ForEach(memories) { memory in MemoryCard(memory: memory) }
                     }
                 }
             }
         }
         .padding(24)
         .navigationTitle("记忆概览")
-        .task { await viewModel.load() }
     }
 }
 
@@ -126,7 +125,7 @@ struct MemoryEditorView: View {
             Picker("分类", selection: $category) { ForEach(MemoryCategory.allCases) { Text($0.rawValue).tag($0) } }
             HStack { Spacer(); Button("取消") { dismiss() }; Button("保存") {
                 let now = Date()
-                let item = MemoryItem(id: memory?.id ?? UUID(), content: content, category: category, source: memory?.source ?? .manual, createdAt: memory?.createdAt ?? now, updatedAt: now, isDeleted: memory?.isDeleted ?? false)
+                let item = MemoryItem(id: memory?.id ?? 0, content: content, category: category, source: memory?.source ?? .manual, createdAt: memory?.createdAt ?? now, updatedAt: now, isDeleted: memory?.isDeleted ?? false)
                 onSave(item); dismiss()
             }.disabled(content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
         }.padding().frame(width: 420)

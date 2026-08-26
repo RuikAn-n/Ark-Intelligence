@@ -2,9 +2,9 @@ import Foundation
 
 enum MockData {
     static let memories: [MemoryItem] = [
-        MemoryItem(id: UUID(), content: "正在开发 Ark Intelligence 本地 AI 助手。", category: .project, source: .retrieval, createdAt: .now.addingTimeInterval(-86400 * 8), updatedAt: .now, isDeleted: false),
-        MemoryItem(id: UUID(), content: "偏好使用 SwiftUI 开发 macOS 客户端。", category: .preference, source: .semantic, createdAt: .now.addingTimeInterval(-86400 * 5), updatedAt: .now, isDeleted: false),
-        MemoryItem(id: UUID(), content: "希望打造开箱即用的 AI 助手。", category: .goal, source: .manual, createdAt: .now.addingTimeInterval(-86400 * 2), updatedAt: .now, isDeleted: false)
+        MemoryItem(id: 1, content: "正在开发 Ark Intelligence 本地 AI 助手。", category: .project, source: .retrieval, createdAt: .now.addingTimeInterval(-86400 * 8), updatedAt: .now, isDeleted: false),
+        MemoryItem(id: 2, content: "偏好使用 SwiftUI 开发 macOS 客户端。", category: .preference, source: .semantic, createdAt: .now.addingTimeInterval(-86400 * 5), updatedAt: .now, isDeleted: false),
+        MemoryItem(id: 3, content: "希望打造开箱即用的 AI 助手。", category: .goal, source: .manual, createdAt: .now.addingTimeInterval(-86400 * 2), updatedAt: .now, isDeleted: false)
     ]
 
     static let conversations: [ConversationRecord] = [

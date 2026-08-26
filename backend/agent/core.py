@@ -16,6 +16,7 @@ from memory.consolidator import MemoryConsolidator
 from memory.manager import MemoryManager
 from memory.retriever import MemoryRetriever
 from memory.writer import MemoryWriter
+from memory.database import get_all_memories
 
 
 class ArkAgent:
@@ -147,6 +148,32 @@ class ArkAgent:
         if isinstance(chunk, dict):
             return chunk.get("message", {}).get("thinking", "")
         return getattr(getattr(chunk, "message", None), "thinking", "") or ""
+
+    @staticmethod
+    def _memory_items(memory_context):
+        stored_memories = get_all_memories()
+        items = []
+        for line in memory_context.splitlines():
+            line = line.strip()
+            if not line.startswith("- [") or "] " not in line:
+                continue
+            label, content = line[3:].split("] ", 1)
+            category, _, memory_type = label.partition("/")
+            matching = next(
+                (
+                    item for item in stored_memories
+                    if item["content"] == content and item["category"] == category
+                ),
+                None,
+            )
+            items.append({
+                "id": matching["id"] if matching else 0,
+                "content": content,
+                "category": category,
+                "memory_type": memory_type or "fact",
+                "source": "retrieval",
+            })
+        return items
 
     @staticmethod
     def _usage_tokens(chunk):
@@ -310,13 +337,18 @@ class ArkAgent:
                 f"[MemoryHandoff] request={request_id} context={memory_context!r}",
                 flush=True,
             )
+            events.put({
+                "event": "memory",
+                "request_id": request_id,
+                "items": self._memory_items(memory_context),
+                "count": len(self._memory_items(memory_context)),
+            })
             if feedback_future:
                 try:
-                    feedback_ready = feedback_future.result(timeout=self.feedback_timeout)
-                    with state_lock:
-                        state["feedback"] = feedback_ready.strip()
+                    feedback_future.result(timeout=self.feedback_timeout)
                 except Exception as exc:
                     print(f"[FeedbackHandoff] ERROR: {exc!r}", flush=True)
+                put_feedback(feedback_future)
             with state_lock:
                 feedback = state["feedback"]
                 state["answer_started"] = time.perf_counter()
@@ -387,7 +419,6 @@ class ArkAgent:
                         state["answer_parts"].append(content)
                         if not usage_tokens:
                             state["token_count"] += 1
-                    events.put({"event": "token", "request_id": request_id, "content": content})
             except Exception as exc:
                 events.put({"event": "error", "request_id": request_id, "error": str(exc)})
                 return
@@ -416,6 +447,8 @@ class ArkAgent:
                     summary_future.result(timeout=self.feedback_timeout)
                 except Exception as exc:
                     print(f"[FeedbackSummary] wait ERROR: {exc!r}", flush=True)
+            for content in answer_parts:
+                events.put({"event": "token", "request_id": request_id, "content": content})
             total_ms = (time.perf_counter() - answer_started) * 1000
             if not token_count:
                 token_count = len("".join(answer_parts))
@@ -454,7 +487,6 @@ class ArkAgent:
             feedback_future = executor.submit(
                 self._initial_feedback, message, memory_future
             )
-            executor.submit(put_feedback, feedback_future)
         executor.submit(run_main)
 
         while True:

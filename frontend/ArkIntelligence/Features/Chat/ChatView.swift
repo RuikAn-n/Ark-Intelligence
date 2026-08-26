@@ -23,6 +23,9 @@ struct ChatView: View {
                     if case .failed(let message) = viewModel.state {
                         ErrorStateView(message: message).frame(maxWidth: .infinity)
                     }
+                    if let sessionError = viewModel.sessionError {
+                        ErrorStateView(message: sessionError).frame(maxWidth: .infinity)
+                    }
                 }
                 .padding(24)
             }
@@ -30,6 +33,14 @@ struct ChatView: View {
             ChatInputView(viewModel: viewModel)
         }
         .navigationTitle("主对话")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("结束对话", systemImage: "checkmark.circle") {
+                    Task { await viewModel.endSession() }
+                }
+                .disabled(viewModel.messages.isEmpty || viewModel.state == .thinking || viewModel.isEndingSession)
+            }
+        }
     }
 }
 
@@ -41,8 +52,9 @@ struct MessageBubble: View {
         VStack(alignment: .leading, spacing: 8) {
             Label(label, systemImage: icon).font(.headline)
             if message.role == .summarizer {
-                DisclosureGroup("4B 模型分析", isExpanded: $showDetails) {
-                    Text(message.content).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("4B 模型分析").font(.subheadline.bold()).foregroundStyle(.secondary)
+                    Text(message.content)
                 }
             } else {
                 Text((try? AttributedString(markdown: message.content)) ?? AttributedString(message.content))
@@ -70,23 +82,42 @@ struct MessageBubble: View {
         .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
     }
 
-    private var label: String { message.role == .user ? "你" : (message.modelInfo?.modelName ?? "Ark Intelligence") }
+    private var label: String {
+        switch message.role {
+        case .user: "你"
+        case .system: "系统"
+        default: message.modelInfo?.modelName ?? "Ark Intelligence"
+        }
+    }
     private var icon: String { message.role == .user ? "person" : "sparkles" }
 }
 
 struct ChatInputView: View {
     @ObservedObject var viewModel: ChatViewModel
+    @FocusState private var inputIsFocused: Bool
     var body: some View {
         HStack(alignment: .bottom) {
-            TextField("输入消息，Enter 发送", text: $viewModel.draft, axis: .vertical)
-                .lineLimit(1...6)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit { Task { await viewModel.send() } }
+            ZStack(alignment: .topLeading) {
+                if viewModel.draft.isEmpty {
+                    Text("输入消息…")
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 8)
+                        .allowsHitTesting(false)
+                }
+                TextEditor(text: $viewModel.draft)
+                    .focused($inputIsFocused)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 42, maxHeight: 120)
+            }
+            .padding(4)
+            .background(.background, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(.quaternary))
             Button("发送", systemImage: "arrow.up.circle.fill") { Task { await viewModel.send() } }
-                .keyboardShortcut(.return, modifiers: [])
                 .disabled(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(16)
+        .onAppear { inputIsFocused = true }
     }
 }
 

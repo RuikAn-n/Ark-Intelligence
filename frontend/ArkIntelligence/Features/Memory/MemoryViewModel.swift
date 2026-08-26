@@ -30,7 +30,7 @@ final class MemoryViewModel: ObservableObject {
             if memories.contains(where: { $0.id == memory.id }) {
                 try await repository.updateMemory(memory)
             } else {
-                try await repository.createMemory(memory)
+                _ = try await repository.createMemory(memory)
             }
             await load()
         } catch { errorMessage = error.localizedDescription }
