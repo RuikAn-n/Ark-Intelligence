@@ -1,0 +1,26 @@
+{
+  "protocol_version": "1.0",
+  "digests": {
+    "ark.applications": "ef02de2436d0452b5390e814c0aea00062f2ab5dc9761d91f44535405bf43c6f",
+    "ark.calendar": "d9d4f3de4fbfbea9a65ff7ffcbb23bd7f6a1c263ccf1456343f912158603af70",
+    "ark.reminders": "e3068a553427df8f816f2789581c9e2bec1fa890fb09bbadb154e0b58ec94a80"
+  },
+  "actions": [
+    "applications.find_apps",
+    "applications.list_running_apps",
+    "applications.open_app",
+    "applications.activate_app",
+    "applications.quit_app",
+    "calendar.list_calendars",
+    "calendar.list_events",
+    "calendar.create_event",
+    "calendar.update_event",
+    "calendar.delete_event",
+    "reminders.list_lists",
+    "reminders.list_reminders",
+    "reminders.create_reminder",
+    "reminders.update_reminder",
+    "reminders.complete_reminder",
+    "reminders.delete_reminder"
+  ]
+}

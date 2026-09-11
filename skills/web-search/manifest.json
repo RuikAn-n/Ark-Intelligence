@@ -1,0 +1,102 @@
+{
+  "schema_version": "1.0",
+  "id": "ark.web_search",
+  "version": "1.0.0",
+  "name": "网络搜索",
+  "description": "搜索公开互联网并读取网页正文，为实时问题提供带来源的回答",
+  "icon": "globe",
+  "default_enabled": true,
+  "compatibility": {
+    "ark": "1.0",
+    "platform": "macos",
+    "min_os": "14.0"
+  },
+  "instructions": "SKILL.md",
+  "actions": [
+    {
+      "id": "web.search",
+      "description": "搜索公开互联网。用户要求搜索、问题涉及当前或最新信息、或仅凭已有知识不足时调用；结果偏题时最多改写查询一次，优先加入实体、日期或站点限定。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {"type": "string", "minLength": 1, "maxLength": 300},
+          "count": {"type": "integer", "minimum": 1, "maximum": 5},
+          "recency_days": {"type": "integer", "minimum": 1, "maximum": 3650}
+        },
+        "required": ["query"],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "query": {"type": "string"},
+          "effective_query": {"type": "string"},
+          "provider": {"type": "string"},
+          "searched_at": {"type": "string", "format": "date-time"},
+          "results": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {"type": "string"},
+                "url": {"type": "string", "format": "uri"},
+                "snippet": {"type": "string"},
+                "published_at": {"type": ["string", "null"]}
+              },
+              "required": ["title", "url", "snippet", "published_at"],
+              "additionalProperties": false
+            }
+          },
+          "verified": {"const": true}
+        },
+        "required": ["query", "effective_query", "provider", "searched_at", "results", "verified"],
+        "additionalProperties": false
+      },
+      "executor": "python",
+      "handler": "web.search",
+      "permissions": [],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 20000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "web.fetch_page",
+      "description": "读取搜索结果中的公开网页正文。只读取回答所需的少量高相关页面；不支持登录、内网地址、文件下载或超过 1MB 的内容。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {"type": "string", "format": "uri", "maxLength": 1200},
+          "max_chars": {"type": "integer", "minimum": 1000, "maximum": 9000}
+        },
+        "required": ["url"],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "url": {"type": "string", "format": "uri"},
+          "final_url": {"type": "string", "format": "uri"},
+          "title": {"type": "string"},
+          "content": {"type": "string"},
+          "content_type": {"type": "string"},
+          "fetched_at": {"type": "string", "format": "date-time"},
+          "truncated": {"type": "boolean"},
+          "verified": {"const": true}
+        },
+        "required": ["url", "final_url", "title", "content", "content_type", "fetched_at", "truncated", "verified"],
+        "additionalProperties": false
+      },
+      "executor": "python",
+      "handler": "web.fetch_page",
+      "permissions": [],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 30000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    }
+  ]
+}

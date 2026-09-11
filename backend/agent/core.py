@@ -27,7 +27,7 @@ class ArkAgent:
             "ARK_FEEDBACK_MODEL", config.get("feedback_model", "qwen3.5:4b-mlx")
         )
         self.feedback_enabled = os.getenv(
-            "ARK_FEEDBACK_ENABLED", str(config.get("feedback_enabled", True))
+            "ARK_FEEDBACK_ENABLED", str(config.get("feedback_enabled", False))
         ).lower() not in {"0", "false", "no"}
         self.feedback_timeout = float(
             os.getenv("ARK_FEEDBACK_TIMEOUT", config.get("feedback_timeout_seconds", 8))
@@ -63,7 +63,7 @@ class ArkAgent:
             "请核对该理解，不要盲目采纳，也不要向用户暴露模型协作细节。\n"
             if feedback else ""
         )
-        return f"""你是 Ark Intelligence。
+        return f"""你叫 Sophie，是 Ark Intelligence 的个人 AI 助手。跟随用户使用中文或英文。
 
 你的身份：
 - 你是用户的个人AI助手。
@@ -365,6 +365,8 @@ class ArkAgent:
                     model=self.model,
                     think=self.main_thinking,
                     stream=True,
+                    keep_alive="2m",
+                    options={"num_ctx": 8192, "num_predict": 2048},
                     messages=[
                         {
                             "role": "system",

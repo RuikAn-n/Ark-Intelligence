@@ -13,6 +13,9 @@ struct MockChatRepository: ChatRepository {
     func endSession() async throws -> SessionEndResponse {
         SessionEndResponse(status: "session consolidated")
     }
+    func submitApproval(runID: String, callID: String, digest: String, approved: Bool) async throws {}
+    func cancel(runID: String) async throws {}
+    func restoreHistory(_ messages: [ChatMessage]) {}
 }
 
 @MainActor
@@ -35,6 +38,46 @@ final class MockMemoryRepository: MemoryRepository, ObservableObject {
 
 struct MockConversationRepository: ConversationRepository {
     func fetchConversations() async throws -> [ConversationRecord] { MockData.conversations }
+    func saveConversation(_ conversation: ConversationRecord) async throws { }
+    func deleteConversation(id: UUID) async throws { }
+}
+
+@MainActor
+final class LocalConversationRepository: ConversationRepository {
+    private let fileURL: URL
+
+    init(fileName: String = "conversation_history.json") {
+        let supportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let appDirectory = supportDirectory.appendingPathComponent("ArkIntelligence", isDirectory: true)
+        try? FileManager.default.createDirectory(at: appDirectory, withIntermediateDirectories: true)
+        self.fileURL = appDirectory.appendingPathComponent(fileName)
+    }
+
+    func fetchConversations() async throws -> [ConversationRecord] {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return [] }
+        let data = try Data(contentsOf: fileURL)
+        let conversations = try JSONDecoder().decode([ConversationRecord].self, from: data)
+        return conversations.sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    func saveConversation(_ conversation: ConversationRecord) async throws {
+        var conversations = (try? await fetchConversations()) ?? []
+        if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
+            conversations[index] = conversation
+        } else {
+            conversations.insert(conversation, at: 0)
+        }
+        let sorted = conversations.sorted { $0.updatedAt > $1.updatedAt }
+        let data = try JSONEncoder().encode(sorted)
+        try data.write(to: fileURL, options: .atomic)
+    }
+
+    func deleteConversation(id: UUID) async throws {
+        var conversations = (try? await fetchConversations()) ?? []
+        conversations.removeAll { $0.id == id }
+        let data = try JSONEncoder().encode(conversations)
+        try data.write(to: fileURL, options: .atomic)
+    }
 }
 
 @MainActor

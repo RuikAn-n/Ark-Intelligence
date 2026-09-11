@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
+  <key>CFBundleExecutable</key><string>ArkIntelligence</string>
+  <key>CFBundleIdentifier</key><string>com.arkintelligence.desktop</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleName</key><string>Ark Intelligence</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>NSMicrophoneUsageDescription</key><string>Sophie 需要使用麦克风来识别 Hey Sophie 唤醒词并进行本地语音对话。</string>
+  <key>NSCalendarsFullAccessUsageDescription</key><string>Ark 需要访问日历，以按你的明确请求查询、创建和调整日程。</string>
+  <key>NSRemindersFullAccessUsageDescription</key><string>Ark 需要访问提醒事项，以按你的明确请求查询、创建和更新提醒。</string>
+</dict>
+</plist>

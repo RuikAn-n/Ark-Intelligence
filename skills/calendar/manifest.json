@@ -1,0 +1,230 @@
+{
+  "schema_version": "1.0",
+  "id": "ark.calendar",
+  "version": "1.0.0",
+  "name": "日历",
+  "description": "查询、创建、改期与删除单次日程",
+  "icon": "calendar",
+  "compatibility": {
+    "ark": "1.0",
+    "platform": "macos",
+    "min_os": "14.0"
+  },
+  "instructions": "SKILL.md",
+  "actions": [
+    {
+      "id": "calendar.list_calendars",
+      "description": "列出可用日历",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "calendar.list_calendars",
+      "permissions": [
+        "calendar"
+      ],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "calendar.list_events",
+      "description": "查询指定起止时间的日程，最长31天，最多50条",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "calendar_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "calendar.list_events",
+      "permissions": [
+        "calendar"
+      ],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "calendar.create_event",
+      "description": "新建单次日程；必须明确起止时间、时区和日历",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "all_day": {
+            "type": "boolean"
+          },
+          "calendar_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "title",
+          "start",
+          "end",
+          "timezone",
+          "calendar_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "calendar.create_event",
+      "permissions": [
+        "calendar"
+      ],
+      "side_effect": "write",
+      "confirmation": "always",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "calendar.update_event",
+      "description": "修改已查询的单次日程；必须携带原始 version，改期需同时提供 start/end",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "all_day": {
+            "type": "boolean"
+          },
+          "event_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "expected_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "event_id",
+          "expected_version"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "calendar.update_event",
+      "permissions": [
+        "calendar"
+      ],
+      "side_effect": "write",
+      "confirmation": "always",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "calendar.delete_event",
+      "description": "删除已查询的单次日程",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "expected_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "event_id",
+          "expected_version"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "calendar.delete_event",
+      "permissions": [
+        "calendar"
+      ],
+      "side_effect": "write",
+      "confirmation": "always",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    }
+  ]
+}

@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *.pyo
 .venv/
+.voice-venv/
+.voice-models/
+.voice-cache/
 venv/
 env/
 
@@ -20,3 +23,13 @@ env/
 .DS_Store
 .idea/
 .vscode/
+
+# Swift and packaged app output
+frontend/.build/
+.build/
+build/
+*.app/
+# Execution journals and auth are local only
+.runtime/
+*.sqlite3-wal
+*.sqlite3-shm

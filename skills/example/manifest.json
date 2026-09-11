@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "id": "ark.example",
+  "version": "1.0.0",
+  "name": "示例技能",
+  "description": "验证 Python 执行器与统一协议",
+  "icon": "puzzlepiece",
+  "compatibility": {
+    "ark": "1.0",
+    "platform": "macos",
+    "min_os": "14.0"
+  },
+  "instructions": "SKILL.md",
+  "actions": [
+    {
+      "id": "example.echo",
+      "description": "开发者示例：原样返回输入，无副作用",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "python",
+      "handler": "example.echo",
+      "permissions": [],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    }
+  ]
+}

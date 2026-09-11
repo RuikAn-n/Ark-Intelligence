@@ -45,7 +45,11 @@ def sse_events(message, background_tasks):
 
 @app.get("/")
 def home():
-    return {"status": "Ark Intelligence online"}
+    return {
+        "status": "Ark Intelligence online",
+        "resource_profile": "24gb-balanced",
+        "feedback_model_enabled": agent.feedback_enabled,
+    }
 
 
 @app.post("/chat")
@@ -107,3 +111,26 @@ def remove_memory(memory_id: int, permanent: bool = Query(False)):
 @app.post("/session/end")
 def end_session():
     return {"status": "session consolidated", "result": agent.end_session()}
+
+# All local API clients authenticate; native execution is only exposed over the paired bridge.
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from runtime.security import get_token, authenticated
+from api.skills_api import create_skill_router
+
+local_token = get_token()
+skill_router, run_service = create_skill_router(agent, local_token)
+app.include_router(skill_router)
+
+@app.middleware('http')
+async def local_auth(request: Request, call_next):
+    if not authenticated(request.headers, local_token):
+        return JSONResponse({'detail':'需要可信本地客户端身份'},status_code=401)
+    try:
+        if int(request.headers.get('content-length','0')) > 65536:
+            return JSONResponse({'detail':'请求过大'},status_code=413)
+    except ValueError:
+        return JSONResponse({'detail':'无效请求长度'},status_code=400)
+    if request.url.path in {'/chat','/chat/stream','/session/end'} and run_service.tasks:
+        return JSONResponse({'detail':'已有工具任务正在运行'},status_code=409)
+    return await call_next(request)

@@ -37,7 +37,7 @@ struct ContentView: View {
             case .voice: VoiceConversationView(viewModel: appState.voiceViewModel)
             case .memoryOverview: MemoryOverviewView(memories: appState.chatViewModel.currentRetrievedMemories)
             case .memoryManager: MemoryManagerView(viewModel: appState.memoryViewModel)
-            case .history: ConversationHistoryView(viewModel: appState.historyViewModel)
+            case .history: ConversationHistoryView(viewModel: appState.historyViewModel, chatViewModel: appState.chatViewModel, selection: $selection)
             case .skills: SkillListView(viewModel: appState.skillViewModel)
             }
         }

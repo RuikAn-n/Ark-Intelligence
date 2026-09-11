@@ -1,0 +1,250 @@
+{
+  "schema_version": "1.0",
+  "id": "ark.reminders",
+  "version": "1.0.0",
+  "name": "提醒事项",
+  "description": "查询、创建、修改、完成与删除提醒事项",
+  "icon": "checklist",
+  "compatibility": {
+    "ark": "1.0",
+    "platform": "macos",
+    "min_os": "14.0"
+  },
+  "instructions": "SKILL.md",
+  "actions": [
+    {
+      "id": "reminders.list_lists",
+      "description": "列出提醒事项列表",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "reminders.list_lists",
+      "permissions": [
+        "reminders"
+      ],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "reminders.list_reminders",
+      "description": "查询列表中的提醒事项，最多50条",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "include_completed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "list_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "reminders.list_reminders",
+      "permissions": [
+        "reminders"
+      ],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "reminders.create_reminder",
+      "description": "新建提醒事项，带到期时间时必须提供 timezone",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "due": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "date_only": {
+            "type": "boolean"
+          },
+          "list_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "title",
+          "list_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "reminders.create_reminder",
+      "permissions": [
+        "reminders"
+      ],
+      "side_effect": "write",
+      "confirmation": "always",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "reminders.update_reminder",
+      "description": "修改已查询的提醒事项",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "due": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "date_only": {
+            "type": "boolean"
+          },
+          "reminder_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "expected_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reminder_id",
+          "expected_version"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "reminders.update_reminder",
+      "permissions": [
+        "reminders"
+      ],
+      "side_effect": "write",
+      "confirmation": "always",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "reminders.complete_reminder",
+      "description": "完成提醒事项",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "reminder_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "expected_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reminder_id",
+          "expected_version"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "reminders.complete_reminder",
+      "permissions": [
+        "reminders"
+      ],
+      "side_effect": "write",
+      "confirmation": "always",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "reminders.delete_reminder",
+      "description": "删除提醒事项",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "reminder_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "expected_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reminder_id",
+          "expected_version"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "reminders.delete_reminder",
+      "permissions": [
+        "reminders"
+      ],
+      "side_effect": "write",
+      "confirmation": "always",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    }
+  ]
+}

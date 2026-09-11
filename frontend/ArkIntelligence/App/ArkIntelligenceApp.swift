@@ -3,9 +3,10 @@ import AppKit
 
 @main
 struct ArkIntelligenceApp: App {
-    @State private var appState = AppState()
+    @StateObject private var appState: AppState
 
     init() {
+        _appState = StateObject(wrappedValue: AppState())
         NSApplication.shared.setActivationPolicy(.regular)
         DispatchQueue.main.async {
             NSApplication.shared.activate(ignoringOtherApps: true)

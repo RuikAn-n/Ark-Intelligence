@@ -3,7 +3,15 @@ import Foundation
 @MainActor
 protocol ChatRepository {
     func streamMessage(_ message: String) -> AsyncThrowingStream<ChatStreamEvent, Error>
+    func streamVoiceMessage(_ message: String) -> AsyncThrowingStream<ChatStreamEvent, Error>
     func endSession() async throws -> SessionEndResponse
+    func submitApproval(runID: String, callID: String, digest: String, approved: Bool) async throws
+    func cancel(runID: String) async throws
+    func restoreHistory(_ messages: [ChatMessage])
+}
+
+extension ChatRepository {
+    func streamVoiceMessage(_ message: String) -> AsyncThrowingStream<ChatStreamEvent, Error> { streamMessage(message) }
 }
 
 @MainActor
@@ -18,6 +26,8 @@ protocol MemoryRepository {
 @MainActor
 protocol ConversationRepository {
     func fetchConversations() async throws -> [ConversationRecord]
+    func saveConversation(_ conversation: ConversationRecord) async throws
+    func deleteConversation(id: UUID) async throws
 }
 
 @MainActor

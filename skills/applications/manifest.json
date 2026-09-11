@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0",
+  "id": "ark.applications",
+  "version": "1.0.0",
+  "name": "应用管理",
+  "description": "查找、打开、切换与正常退出 Mac 应用",
+  "icon": "app",
+  "compatibility": {
+    "ark": "1.0",
+    "platform": "macos",
+    "min_os": "14.0"
+  },
+  "instructions": "SKILL.md",
+  "actions": [
+    {
+      "id": "applications.find_apps",
+      "description": "查找本机应用，返回明确的 bundle_id；先查找再打开/退出。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "applications.find_apps",
+      "permissions": [],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "applications.list_running_apps",
+      "description": "列出正在运行的用户应用",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "applications.list_running_apps",
+      "permissions": [],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "applications.open_app",
+      "description": "打开应用",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bundle_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "bundle_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "applications.open_app",
+      "permissions": [],
+      "side_effect": "write",
+      "confirmation": "none",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "applications.activate_app",
+      "description": "切换应用到前台",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bundle_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "bundle_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "applications.activate_app",
+      "permissions": [],
+      "side_effect": "write",
+      "confirmation": "none",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "applications.quit_app",
+      "description": "请求正常退出应用，禁止强制退出",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bundle_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "bundle_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "applications.quit_app",
+      "permissions": [],
+      "side_effect": "write",
+      "confirmation": "none",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    }
+  ]
+}

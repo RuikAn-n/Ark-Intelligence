@@ -13,7 +13,7 @@ enum MockData {
     ]
 
     static let skills: [Skill] = [
-        Skill(id: UUID(), name: "Music Generator", description: "MIDI 音乐生成", icon: "music.note", isEnabled: true),
-        Skill(id: UUID(), name: "File Analyzer", description: "文件分析", icon: "folder", isEnabled: false)
+        Skill(id: "ark.music", version: "1.0.0", name: "Music Generator", description: "MIDI 音乐生成", icon: "music.note", isEnabled: true, available: true, requiredPermissions: [], permissionStatus: [:], actions: []),
+        Skill(id: "ark.files", version: "1.0.0", name: "File Analyzer", description: "文件分析", icon: "folder", isEnabled: false, available: false, requiredPermissions: [], permissionStatus: [:], actions: [])
     ]
 }

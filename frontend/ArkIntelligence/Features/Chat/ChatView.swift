@@ -2,6 +2,11 @@ import SwiftUI
 
 struct ChatView: View {
     @ObservedObject var viewModel: ChatViewModel
+    @AppStorage("chat.taskPanel.visible") private var showsTaskPanel = false
+
+    private var waitingApprovalCount: Int {
+        viewModel.toolActivities.count(where: { $0.state == .waitingApproval })
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -15,14 +20,6 @@ struct ChatView: View {
                             MessageBubble(message: message)
                         }
                     }
-                    if viewModel.state == .thinking {
-                        Label("正在思考…", systemImage: "ellipsis")
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal)
-                    }
-                    if case .failed(let message) = viewModel.state {
-                        ErrorStateView(message: message).frame(maxWidth: .infinity)
-                    }
                     if let sessionError = viewModel.sessionError {
                         ErrorStateView(message: sessionError).frame(maxWidth: .infinity)
                     }
@@ -33,12 +30,34 @@ struct ChatView: View {
             ChatInputView(viewModel: viewModel)
         }
         .navigationTitle("主对话")
+        .inspector(isPresented: $showsTaskPanel) {
+            TaskPanelView(viewModel: viewModel)
+                .inspectorColumnWidth(min: 300, ideal: 360, max: 460)
+        }
+        .onChange(of: waitingApprovalCount) { previous, current in
+            if current > previous { showsTaskPanel = true }
+        }
         .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showsTaskPanel.toggle()
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "sidebar.trailing")
+                        if viewModel.activeRunCount > 0 {
+                            Text("\(viewModel.activeRunCount)")
+                                .font(.caption.monospacedDigit().bold())
+                        }
+                    }
+                }
+                .help(showsTaskPanel ? "隐藏任务栏" : "显示任务栏")
+                .accessibilityLabel(showsTaskPanel ? "隐藏任务栏" : "显示任务栏，\(viewModel.activeRunCount) 个任务运行中")
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("结束对话", systemImage: "checkmark.circle") {
                     Task { await viewModel.endSession() }
                 }
-                .disabled(viewModel.messages.isEmpty || viewModel.state == .thinking || viewModel.isEndingSession)
+                .disabled(viewModel.messages.isEmpty || viewModel.activeRunCount > 0 || viewModel.isEndingSession)
             }
         }
     }
@@ -114,7 +133,7 @@ struct ChatInputView: View {
             .background(.background, in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(.quaternary))
             Button("发送", systemImage: "arrow.up.circle.fill") { Task { await viewModel.send() } }
-                .disabled(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isEndingSession)
         }
         .padding(16)
         .onAppear { inputIsFocused = true }

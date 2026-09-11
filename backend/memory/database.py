@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,8 +21,18 @@ def _connect():
     return conn
 
 
+@contextmanager
+def _connection():
+    conn = _connect()
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
+
+
 def init_db():
-    with _connect() as conn:
+    with _connection() as conn:
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS memories (
@@ -93,7 +104,7 @@ def save_memory(
         raise ValueError("Memory content cannot be empty")
 
     now = _now()
-    with _connect() as conn:
+    with _connection() as conn:
         duplicate = conn.execute(
             """
             SELECT id FROM memories
@@ -125,7 +136,7 @@ def save_memory(
 
 
 def get_memories():
-    with _connect() as conn:
+    with _connection() as conn:
         return [
             row["content"]
             for row in conn.execute(
@@ -139,7 +150,7 @@ def get_memories():
 
 
 def get_memories_with_category():
-    with _connect() as conn:
+    with _connection() as conn:
         return [
             tuple(row)
             for row in conn.execute(
@@ -154,7 +165,7 @@ def get_memories_with_category():
 
 
 def get_all_memories(include_deleted=False):
-    with _connect() as conn:
+    with _connection() as conn:
         query = """
             SELECT id, content, category, memory_type, source, confidence,
                    importance, status, created_at, updated_at, last_accessed_at
@@ -167,14 +178,14 @@ def get_all_memories(include_deleted=False):
 
 
 def delete_memory_permanently(memory_id):
-    with _connect() as conn:
+    with _connection() as conn:
         cursor = conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
         if cursor.rowcount != 1:
             raise ValueError(f"Memory {memory_id} does not exist")
 
 
 def get_memories_with_embeddings():
-    with _connect() as conn:
+    with _connection() as conn:
         rows = conn.execute(
             """
             SELECT m.id, m.content, m.category, m.memory_type,
@@ -208,7 +219,7 @@ def update_memory(memory_id, content, category="general", memory_type="fact"):
     content = content.strip()
     if not content:
         raise ValueError("Memory content cannot be empty")
-    with _connect() as conn:
+    with _connection() as conn:
         cursor = conn.execute(
             """
             UPDATE memories
@@ -222,7 +233,7 @@ def update_memory(memory_id, content, category="general", memory_type="fact"):
 
 
 def delete_memory(memory_id):
-    with _connect() as conn:
+    with _connection() as conn:
         conn.execute(
             """
             UPDATE memories SET status = 'deleted', updated_at = ?
@@ -233,7 +244,7 @@ def delete_memory(memory_id):
 
 
 def touch_memory(memory_id):
-    with _connect() as conn:
+    with _connection() as conn:
         conn.execute(
             """
             UPDATE memories
@@ -245,7 +256,7 @@ def touch_memory(memory_id):
 
 
 def save_embedding(memory_id, model, vector):
-    with _connect() as conn:
+    with _connection() as conn:
         conn.execute(
             """
             INSERT OR REPLACE INTO memory_embeddings
@@ -257,7 +268,7 @@ def save_embedding(memory_id, model, vector):
 
 
 def get_embedding(memory_id):
-    with _connect() as conn:
+    with _connection() as conn:
         row = conn.execute(
             "SELECT vector FROM memory_embeddings WHERE memory_id = ?",
             (memory_id,),

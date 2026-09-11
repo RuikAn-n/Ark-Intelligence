@@ -10,7 +10,13 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "ArkIntelligence",
-            path: "ArkIntelligence"
+            path: "ArkIntelligence",
+            resources: [.copy("Resources")]
+        ),
+        .testTarget(
+            name: "ArkIntelligenceTests",
+            dependencies: ["ArkIntelligence"],
+            path: "ArkIntelligenceTests"
         )
     ]
 )

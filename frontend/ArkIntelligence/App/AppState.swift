@@ -7,14 +7,19 @@ final class AppState: ObservableObject {
     let historyViewModel: HistoryViewModel
     let skillViewModel: SkillViewModel
     let voiceViewModel: VoiceViewModel
+    let nativeCapabilityHost: NativeCapabilityHost
 
     init() {
         let memories = MockMemoryRepository()
-        let apiURL = URL(string: ProcessInfo.processInfo.environment["ARK_API_URL"] ?? "http://127.0.0.1:8000")!
-        chatViewModel = ChatViewModel(repository: LiveChatRepository(baseURL: apiURL), memoryRepository: memories)
+        let apiURL = URL(string: ProcessInfo.processInfo.environment["ARK_API_URL"] ?? "http://127.0.0.1:8765")!
+        let conversationRepository = LocalConversationRepository()
+        chatViewModel = ChatViewModel(repository: LiveChatRepository(baseURL: apiURL), memoryRepository: memories, conversationRepository: conversationRepository)
         memoryViewModel = MemoryViewModel(repository: LiveMemoryRepository(baseURL: apiURL))
-        historyViewModel = HistoryViewModel(repository: MockConversationRepository())
-        skillViewModel = SkillViewModel(repository: MockSkillRepository())
-        voiceViewModel = VoiceViewModel(service: MockVoiceService())
+        historyViewModel = HistoryViewModel(repository: conversationRepository)
+        skillViewModel = SkillViewModel(repository: LiveSkillRepository(baseURL: apiURL))
+        let voiceURL = URL(string: ProcessInfo.processInfo.environment["ARK_VOICE_URL"] ?? "http://127.0.0.1:8766")!
+        voiceViewModel = VoiceViewModel(service: LiveVoiceService(baseURL: voiceURL, apiURL: apiURL), chat: chatViewModel)
+        nativeCapabilityHost = NativeCapabilityHost(baseURL: apiURL)
+        nativeCapabilityHost.start()
     }
 }
