@@ -51,6 +51,10 @@ class ApprovalRequest(BaseModel):
 class SessionRequest(BaseModel):
     session_id: str
 
+class HermesActionRequest(RunRequest):
+    action_id: str = Field(min_length=1,max_length=100)
+    request_id: str = Field(pattern=r'^[a-zA-Z0-9-]{1,64}$')
+
 
 def create_skill_router(agent,token):
     router=APIRouter()
@@ -66,6 +70,26 @@ def create_skill_router(agent,token):
 
     @router.get('/skills')
     def skills(): return {'skills':registry.listing(bridge.actions,bridge.permissions)}
+
+    # Scoped integration routes deliberately expose no approval or enable/disable operation.
+    @router.get('/integrations/hermes/skills')
+    def hermes_skills(): return skills()
+
+    @router.post('/integrations/hermes/runs',status_code=201)
+    async def hermes_create(request:HermesActionRequest):
+        request.session_id='hermes-'+request.session_id[:57]
+        try: return service.create(request,source='hermes',request_id=request.request_id)
+        except SkillError as exc: raise HTTPException(409,str(exc))
+
+    @router.get('/integrations/hermes/runs')
+    def hermes_runs():
+        return {'runs':[r for r in store.list_runs(active_only=True,limit=200) if r.get('source')=='hermes']}
+
+    @router.get('/integrations/hermes/runs/{id}')
+    def hermes_run(id:str):
+        run=get_run(id)
+        if run.get('source')!='hermes': raise HTTPException(404,'任务不存在')
+        return dict(run,calls=store.calls(id))
 
     @router.get('/skills/{id}')
     def skill(id:str):

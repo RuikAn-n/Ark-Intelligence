@@ -63,7 +63,7 @@
 
 ## 已完成验证
 
-- 25 项聊天后端测试、8 项语音状态测试、8 项 Swift 测试通过。
+- 25 项聊天后端测试、13 项语音状态测试、8 项 Swift 测试通过。
 - 已构建并签名应用；已检查 Sophie 页面。
 - 实机连接修复：VoiceProcessingIO 的输入输出使用相同 I/O 格式，24kHz TTS 在混音器中转换，解决 `-10875 / client-side input and output formats do not match`。录音 tap 在非 MainActor 类型中构造，播放完成回调明确为 Sendable，解决实时音频线程上的 Swift executor 断言退出。新增后台 tap 重采样测试。实际开启麦克风后界面已进入“说 Hey Sophie 唤醒”，WebSocket 保持连接。
 - 音频初始化失败现在单独显示设备错误，不再误报为“语音服务未连接”。
@@ -125,3 +125,10 @@ backend/.venv/bin/python scripts/voice_agent_smoke_test.py
 - https://github.com/k2-fsa/sherpa-onnx
 - https://k2-fsa.github.io/sherpa/onnx/kws/pretrained_models/index.html
 - https://github.com/snakers4/silero-vad
+
+## 2026-09-12 杂音与上下文保护
+
+- VAD 开始信号不再直接打断播放或使聊天回调失效。普通输入要经过声学检查、识别后才提交。
+- 声学检查以 20ms 帧计算能量，要求至少 240ms 有效能量和最低占比，结合非语音时更新的底噪估计，过滤静音、低能量底噪和短促冲击；不会按文字长度丢弃“好”等有效短回答。很轻、很短的语音也可能被过滤，需真人调校。
+- 回答生成或播放期间，默认仅 Hey Sophie 明确唤醒或“直接说话”允许新输入。KWS 提供快速明确打断；ASR 复核拒绝非唤醒背景内容，拒绝结果不发送 transcript，因此不会进入聊天、Skill 或记忆。点击直接说话授权下一句，不受旧 TTS 尚在停止中的状态影响。
+- 13 项语音状态/噪声防护回归与真实模型唤醒→识别→合成→打断通路通过。持续背景人声、回声与真人多噪声场景仍需实测；不宣称已具备说话人分离能力。既有历史不会自动删除。

@@ -124,7 +124,7 @@ struct VoiceConversationView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Button("结束并整理记忆") { Task { await viewModel.endSession() } }
                     .disabled(chat.isBusy || chat.isEndingSession || chat.messages.isEmpty)
-                Text("关闭麦克风会停止监听；停止朗读不会撤销已执行的操作。")
+                Text("回答期间说 Hey Sophie 或点击“直接说话”插话，避免杂音打断。")
                     .font(.caption2).foregroundStyle(.secondary)
             }.padding(24).frame(minWidth: 440, maxWidth: .infinity, maxHeight: .infinity)
             TaskPanelView(viewModel: chat).frame(minWidth: 260, idealWidth: 320, maxWidth: 400)

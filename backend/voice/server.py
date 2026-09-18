@@ -13,6 +13,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPExcept
 
 from runtime.security import authenticated, get_token
 from voice.models import Detector, SpeechModels
+from voice.input_guard import has_speech_energy
 
 app = FastAPI()
 models = SpeechModels()
@@ -82,6 +83,9 @@ class VoiceSession:
         self.awake = False
         self.last_activity = time.monotonic()
         self.speech_active = False
+        self.noise_floor = 0.0005
+        self.require_wake_for_segment = False
+        self.manual_input = False
         self.transcribing = False
         self.wake_check_pending = False
         self.synthesizing = False
@@ -136,15 +140,19 @@ class VoiceSession:
             diagnostics['capture_dropped_packets'] = dropped
         elif command == 'listen':
             await self.interrupt()
+            self.manual_input = True
             self.awake = True
             self.strip_next_wake = False
+            self.require_wake_for_segment = False
             self.last_activity = time.monotonic()
             self.detector.reset()
             self.speech_active = False
             await self.send('status', state='listening')
         elif command == 'arm':
             await self.interrupt()
+            self.manual_input = False
             self.awake = False
+            self.require_wake_for_segment = False
             self.detector.reset()
             self.speech_active = False
             await self.send('status', state='armed')
@@ -207,30 +215,50 @@ class VoiceSession:
                     segment = np.asarray(self.detector.vad.front.samples, dtype=np.float32).copy()
                     self.detector.vad.pop()
                     self.detector.vad.reset()
-                    if not self.wake_check_pending and 5600 <= len(segment) <= 128000:
+                    if not self.wake_check_pending and 5600 <= len(segment) <= 128000 and has_speech_energy(segment, self.noise_floor):
                         self.wake_check_pending = True
                         self.background(self.check_wake(segment, self.epoch))
             return
         if self.transcribing:
             return
+        busy = (self.playing or self.synthesizing or self.waiting_answer or not self.queue.empty()) and not self.manual_input
+        # Explicit keyword interruption stays fast, without treating every VAD
+        # onset as permission to cancel speech or an in-flight chat response.
+        if busy and self.detector.wake(samples):
+            await self.interrupt()
+            self.require_wake_for_segment = False
+            self.strip_next_wake = True
+            self.speech_active = True
+            self.detector.vad.reset()
+            self.detector.vad.accept_waveform(self.ring)
+            await self.send('speech_started', state='listening')
+            await self.send('wake', state='listening')
+            return
         self.detector.vad.accept_waveform(samples)
         talking = self.detector.vad.is_speech_detected()
         if talking:
             self.last_activity = now
-            if not self.speech_active:
-                self.speech_active = True
-                await self.interrupt()
-                await self.send('speech_started', state='listening')
+            self.speech_active = True
+            if busy and not self.strip_next_wake:
+                self.require_wake_for_segment = True
+        elif not self.speech_active:
+            self.noise_floor = 0.98 * self.noise_floor + 0.02 * min(rms, 0.01)
         if not self.detector.vad.empty():
             segment = np.asarray(self.detector.vad.front.samples, dtype=np.float32).copy()
             self.detector.vad.pop()
             self.detector.vad.reset()
             self.speech_active = False
-            self.transcribing = True
-            self.background(self.transcribe(segment, self.epoch, self.strip_next_wake))
+            if has_speech_energy(segment, self.noise_floor):
+                self.transcribing = True
+                self.background(self.transcribe(segment, self.epoch, self.strip_next_wake,
+                                                self.require_wake_for_segment or (busy and not self.strip_next_wake)))
+            else:
+                diagnostics['rejected_noise'] = diagnostics.get('rejected_noise', 0) + 1
+            self.require_wake_for_segment = False
             self.strip_next_wake = False
         elif not talking and not self.playing and not self.synthesizing and self.queue.empty() and now - self.last_activity > (300 if self.waiting_answer else 30):
             self.awake = False
+            self.manual_input = False
             self.detector.reset()
             await self.send('status', state='armed')
 
@@ -256,15 +284,29 @@ class VoiceSession:
         finally:
             self.wake_check_pending = False
 
-    async def transcribe(self, samples, epoch, remove_wake):
+    async def transcribe(self, samples, epoch, remove_wake, require_wake=False):
         try:
-            await self.send('status', state='processing')
+            if not require_wake:
+                await self.send('status', state='processing')
             text = await asyncio.get_running_loop().run_in_executor(executor, models.transcribe, samples)
             if epoch != self.epoch:
                 return
-            if remove_wake:
+            if require_wake:
+                remainder = wake_remainder(text)
+                if remainder is None:
+                    diagnostics['rejected_background'] = diagnostics.get('rejected_background', 0) + 1
+                    return
+                text = remainder
+                await self.interrupt()
+                await self.send('speech_started', state='listening')
+                await self.send('wake', state='listening')
+            elif remove_wake:
                 text = strip_wake(text)
-            if text:
+            if text and any(char.isalnum() for char in text):
+                self.manual_input = False
+                if not require_wake:
+                    await self.interrupt()
+                    await self.send('speech_started', state='listening')
                 farewell = text.lower().strip(' .。!！') in {'再见', '先这样', '结束对话', 'goodbye', 'bye sophie', 'stop listening'}
                 await self.send('transcript', text=text, farewell=farewell)
                 if farewell:

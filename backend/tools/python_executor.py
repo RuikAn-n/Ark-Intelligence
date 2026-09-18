@@ -3,14 +3,18 @@ import asyncio
 
 from skills.registry import SkillError
 from tools.web_search import WebSearchClient, WebSearchError
+from tools.workspace import WorkspaceExecutor
 
 
 class PythonExecutor:
-    def __init__(self, web=None, max_network_concurrency=2):
+    def __init__(self, web=None, max_network_concurrency=2, workspace=None):
         self.web=web
+        self.workspace=workspace or WorkspaceExecutor()
         self.network_slots=asyncio.Semaphore(max(1,min(max_network_concurrency,2)))
 
     async def execute(self, handler, arguments):
+        if handler.startswith('workspace.'):
+            return await self.workspace.execute(handler,arguments)
         if handler=='example.echo':
             return {'text':arguments['text'],'verified':True}
         try:
@@ -33,3 +37,8 @@ class PythonExecutor:
     def _web(self):
         if self.web is None: self.web=WebSearchClient()
         return self.web
+
+    async def prepare(self, handler, arguments):
+        if handler.startswith('workspace.'):
+            return await asyncio.to_thread(self.workspace.prepare,handler,arguments)
+        return {'arguments':arguments}

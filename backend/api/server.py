@@ -119,12 +119,14 @@ from runtime.security import get_token, authenticated
 from api.skills_api import create_skill_router
 
 local_token = get_token()
+hermes_token = get_token('hermes-token')
 skill_router, run_service = create_skill_router(agent, local_token)
 app.include_router(skill_router)
 
 @app.middleware('http')
 async def local_auth(request: Request, call_next):
-    if not authenticated(request.headers, local_token):
+    integration=request.url.path.startswith('/integrations/hermes/')
+    if not authenticated(request.headers, local_token) and not (integration and authenticated(request.headers,hermes_token)):
         return JSONResponse({'detail':'需要可信本地客户端身份'},status_code=401)
     try:
         if int(request.headers.get('content-length','0')) > 65536:

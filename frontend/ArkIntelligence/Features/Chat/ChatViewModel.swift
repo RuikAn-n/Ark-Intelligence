@@ -51,7 +51,29 @@ final class ChatViewModel: ObservableObject {
         streamTasks[localID] = task
     }
 
-    private func consume(text: String, localID: UUID, voice: Bool, onEvent: ((ChatStreamEvent) -> Void)?) async {
+    func monitorExternalRuns() async {
+        while !Task.isCancelled {
+            do {
+                for run in try await repository.externalRuns() {
+                    let existing = backgroundRuns.first(where: { $0.runID == run.id })
+                    if let existing, streamTasks[existing.id] != nil { continue }
+                    let localID = existing?.id ?? UUID()
+                    if existing == nil {
+                        backgroundRuns.append(BackgroundRun(id: localID, runID: run.id, request: "Hermes · " + run.message, startedAt: .now, stage: run.status, detail: "来自 Hermes 的 Skill 请求", isActive: true, error: nil))
+                    } else {
+                        updateRun(localID) { $0.isActive = true; $0.error = nil }
+                    }
+                    toolActivities.removeAll { $0.runID == run.id }
+                    streamTasks[localID] = Task { [weak self] in
+                        await self?.consume(text: run.message, localID: localID, voice: false, onEvent: nil, externalID: run.id)
+                    }
+                }
+            } catch { /* Backend reconnect is retried on the next bounded poll. */ }
+            try? await Task.sleep(for: .seconds(3))
+        }
+    }
+
+    private func consume(text: String, localID: UUID, voice: Bool, onEvent: ((ChatStreamEvent) -> Void)?, externalID: String? = nil) async {
         var assistantID: UUID?
         var retrievedMemories: [MemoryItem] = []
         var receivedTerminalEvent = false
@@ -62,7 +84,7 @@ final class ChatViewModel: ObservableObject {
         }
 
         do {
-            let stream = voice ? repository.streamVoiceMessage(text) : repository.streamMessage(text)
+            let stream = externalID.map { repository.streamExternalRun($0) } ?? (voice ? repository.streamVoiceMessage(text) : repository.streamMessage(text))
             for try await event in stream {
                 onEvent?(event)
                 if let runID = event.runID { updateRun(localID) { $0.runID = runID } }
@@ -97,6 +119,10 @@ final class ChatViewModel: ObservableObject {
                     }
                     state = .streaming
                 case "answer":
+                    if externalID != nil {
+                        updateRun(localID) { $0.detail = event.content ?? "Hermes 请求已完成" }
+                        continue
+                    }
                     if let assistantID, let index = messages.firstIndex(where: { $0.id == assistantID }), let content = event.content {
                         messages[index].content = content
                     }

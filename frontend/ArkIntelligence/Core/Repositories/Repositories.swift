@@ -8,10 +8,20 @@ protocol ChatRepository {
     func submitApproval(runID: String, callID: String, digest: String, approved: Bool) async throws
     func cancel(runID: String) async throws
     func restoreHistory(_ messages: [ChatMessage])
+    func externalRuns() async throws -> [ExternalRun]
+    func streamExternalRun(_ id: String) -> AsyncThrowingStream<ChatStreamEvent, Error>
 }
 
 extension ChatRepository {
+    func externalRuns() async throws -> [ExternalRun] { [] }
+    func streamExternalRun(_ id: String) -> AsyncThrowingStream<ChatStreamEvent, Error> { AsyncThrowingStream { $0.finish() } }
     func streamVoiceMessage(_ message: String) -> AsyncThrowingStream<ChatStreamEvent, Error> { streamMessage(message) }
+}
+
+struct ExternalRun: Decodable, Sendable {
+    let id: String
+    let message: String
+    let status: String
 }
 
 @MainActor

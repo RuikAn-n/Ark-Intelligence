@@ -1,0 +1,140 @@
+{
+  "schema_version": "1.0",
+  "id": "ark.workspace",
+  "version": "1.0.0",
+  "name": "文件与终端",
+  "description": "读写专用工作区文件，审批后运行受限终端命令",
+  "icon": "terminal",
+  "compatibility": {
+    "ark": "1.0",
+    "platform": "macos",
+    "min_os": "14.0"
+  },
+  "instructions": "SKILL.md",
+  "actions": [
+    {
+      "id": "workspace.list_files",
+      "description": "列出专用工作区的文件，获取工作区位置",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "python",
+      "handler": "workspace.list_files",
+      "permissions": [],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 65000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "workspace.read_file",
+      "description": "读取工作区 UTF-8 文件并返回版本；不存在时 version=absent",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "python",
+      "handler": "workspace.read_file",
+      "permissions": [],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 65000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "workspace.write_file",
+      "description": "审批后创建或完整替换工作区文本文件；先 read_file 获取 expected_version，新建使用 absent",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 6000
+          },
+          "expected_version": {
+            "type": "string",
+            "pattern": "^(absent|[a-f0-9]{64})$"
+          }
+        },
+        "required": [
+          "path",
+          "content",
+          "expected_version"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "python",
+      "handler": "workspace.write_file",
+      "permissions": [],
+      "side_effect": "write",
+      "confirmation": "always",
+      "timeout_ms": 65000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "workspace.run_command",
+      "description": "审批后在专用工作区运行 shell 命令；禁网络、禁止访问个人目录，最多 60 秒，不支持后台服务",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "python",
+      "handler": "workspace.run_command",
+      "permissions": [],
+      "side_effect": "write",
+      "confirmation": "always",
+      "timeout_ms": 65000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    }
+  ],
+  "default_enabled": true
+}

@@ -1,0 +1,6 @@
+name: ark-bridge
+version: "1.0.0"
+description: "Ark 原生提醒事项、日历、应用及审批式文件/终端工具桥接"
+author: Ark Intelligence
+hooks:
+  - pre_llm_call

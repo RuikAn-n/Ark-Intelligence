@@ -160,6 +160,12 @@ final class LiveChatRepository: ChatRepository {
         let data = try JSONEncoder().encode(ApprovalPayload(callID: callID, digest: digest, approved: approved))
         let _: StatusResponse = try await client.request(.runApproval(id: runID), method: "POST", body: data)
     }
+    func externalRuns() async throws -> [ExternalRun] {
+        struct Response: Decodable { let runs: [ExternalRun] }
+        let response: Response = try await client.request(.externalRuns)
+        return response.runs
+    }
+    func streamExternalRun(_ id: String) -> AsyncThrowingStream<ChatStreamEvent, Error> { client.streamRun(id) }
     func cancel(runID: String) async throws { let _: StatusResponse = try await client.request(.runCancel(id: runID), method: "POST") }
     func restoreHistory(_ messages: [ChatMessage]) {
         sessionID = UUID().uuidString

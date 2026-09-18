@@ -339,7 +339,7 @@ final class LiveVoiceService: ObservableObject {
         case .armed: "说 Hey Sophie 唤醒"
         case .listening: "我在听，停顿后自动发送"
         case .processing: "正在识别"
-        case .speaking: "Sophie 正在说话，可以直接打断"
+        case .speaking: "Sophie 正在说话，说 Hey Sophie 或点击直接说话可插话"
         case .unavailable: "语音暂不可用"
         }
     }

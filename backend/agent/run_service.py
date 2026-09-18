@@ -73,14 +73,19 @@ class RunService:
         if status in self.progress_labels:
             self.emit(run,'progress',content=self.progress_labels[status],stage=status)
 
-    def create(self, request):
+    def create(self, request, source='ark', request_id=None):
+        request_digest=hashlib.sha256(json.dumps([request.session_id,request.action_id,getattr(request,'arguments',{})],sort_keys=True).encode()).hexdigest()
+        run_id=hashlib.sha256(('hermes:'+request_id).encode()).hexdigest()[:32] if request_id else uuid.uuid4().hex
+        if request_id and (existing:=self.store.get_run(run_id)):
+            if existing.get('request_digest') != request_digest: raise SkillError('CONFLICT','请求标识已用于不同参数')
+            return existing
         active=sum(not task.done() for task in self.tasks.values())
         if active>=self.max_active: raise SkillError('CONFLICT',f'后台任务已达到上限（{self.max_active}），请等待或取消一个任务')
         if request.action_id: self.registry.resolve(request.action_id,request.arguments)
         initial=[{'role':m.role,'content':m.content} for m in request.history]
         messages=self.store.append_messages(request.session_id,[{'role':'user','content':request.message}],initial_messages=compact_history(initial))
         created=datetime.now(timezone.utc).isoformat()
-        run={'id':uuid.uuid4().hex,'session_id':request.session_id,'message':request.message,'status':'queued','pending':None,'skill_ids':[],'created_at':created,'updated_at':created}
+        run={'id':run_id,'session_id':request.session_id,'source':source,'request_digest':request_digest,'message':request.message,'status':'queued','pending':None,'skill_ids':[],'created_at':created,'updated_at':created}
         self.store.save_run(run)
         self.emit(run,'ack',content='请求已接收，可继续发送消息。')
         self.emit(run,'progress',content=self.progress_labels['queued'],stage='queued')
@@ -118,6 +123,8 @@ class RunService:
                 preview=await self.bridge.request(dict(envelope,operation='prepare'))
             else:
                 preview={'summary':action['description'],'arguments':args}
+                if action['handler'].startswith('workspace.'):
+                    preview.update(await self.python_executor.prepare(action['handler'],args))
             digest=hashlib.sha256(json.dumps(preview,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
             if action['confirmation']=='always':
                 future=asyncio.get_running_loop().create_future()

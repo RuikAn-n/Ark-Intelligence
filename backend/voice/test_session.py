@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 runtime = tempfile.TemporaryDirectory(prefix='sophie-unit-')
 os.environ['ARK_RUNTIME_DIR'] = runtime.name
+from voice.input_guard import has_speech_energy
 from voice.server import VoiceSession, strip_wake, wake_remainder
 
 
@@ -39,8 +40,10 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         session.detector = SimpleNamespace(reset=lambda: None)
         await session.control({'command':'listen'})
         self.assertTrue(session.awake)
+        self.assertTrue(session.manual_input)
         await session.control({'command':'arm'})
         self.assertFalse(session.awake)
+        self.assertFalse(session.manual_input)
 
     async def test_input_meter_reports_signal_while_waiting_for_wake(self):
         socket = FakeSocket()
@@ -79,6 +82,57 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(wake_remainder('Hey Sophie!'), '')
         for text in ['Sophie is a name.', 'They said hey Sophie.', '你好', 'Hey Sophia']:
             self.assertIsNone(wake_remainder(text))
+
+    def test_noise_energy_rejects_silence_and_loud_impulse(self):
+        samples = np.zeros(16000, dtype=np.float32)
+        self.assertFalse(has_speech_energy(samples))
+        samples[100:180] = 0.9
+        self.assertFalse(has_speech_energy(samples))
+        samples[1000:9000] = 0.02
+        self.assertTrue(has_speech_energy(samples))
+        self.assertFalse(has_speech_energy(samples, noise_floor=0.01))
+
+    async def test_vad_onset_does_not_interrupt_playback(self):
+        socket = FakeSocket()
+        session = VoiceSession(socket)
+        session.awake = session.playing = True
+        session.detector = SimpleNamespace(wake=lambda samples: False, vad=SimpleNamespace(
+            accept_waveform=lambda samples: None, is_speech_detected=lambda: True, empty=lambda: True))
+        epoch = session.epoch
+        await session.audio(np.full(1600, 0.05, dtype=np.float32))
+        self.assertEqual(session.epoch, epoch)
+        self.assertTrue(session.playing)
+        self.assertNotIn('speech_started', [e['event'] for e in socket.events])
+
+    async def test_background_transcript_cannot_interrupt_or_enter_chat(self):
+        socket = FakeSocket()
+        session = VoiceSession(socket)
+        session.awake = session.playing = session.waiting_answer = True
+        with patch('voice.server.models.transcribe', return_value='这是什么声音？'):
+            await session.transcribe(np.zeros(16000), session.epoch, False, require_wake=True)
+        self.assertEqual(socket.events, [])
+        self.assertTrue(session.playing)
+        self.assertTrue(session.waiting_answer)
+        self.assertEqual(session.epoch, 0)
+
+    async def test_explicit_wake_interrupts_before_committing_transcript(self):
+        socket = FakeSocket()
+        session = VoiceSession(socket)
+        session.awake = session.playing = True
+        with patch('voice.server.models.transcribe', return_value='Hey Sophie, 换一个问题。'):
+            await session.transcribe(np.zeros(16000), session.epoch, False, require_wake=True)
+        events = [e['event'] for e in socket.events]
+        self.assertLess(events.index('speech_started'), events.index('transcript'))
+        self.assertEqual(next(e['text'] for e in socket.events if e['event'] == 'transcript'), '换一个问题。')
+        self.assertFalse(session.playing)
+
+    async def test_short_valid_reply_is_preserved_after_manual_listen(self):
+        socket = FakeSocket()
+        session = VoiceSession(socket)
+        session.awake = True
+        with patch('voice.server.models.transcribe', return_value='好。'):
+            await session.transcribe(np.zeros(16000), session.epoch, False)
+        self.assertEqual(next(e['text'] for e in socket.events if e['event'] == 'transcript'), '好。')
 
     def test_strip_only_leading_wake_word(self):
         self.assertEqual(strip_wake('Hey Sophie, 打开日历。'), '打开日历。')

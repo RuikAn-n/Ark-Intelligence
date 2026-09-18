@@ -30,7 +30,7 @@ class APITests(unittest.TestCase):
         self.assertEqual(self.client.get("/skills").status_code, 401)
         response = self.client.get("/skills", headers=self.auth)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()["skills"]), 5)
+        self.assertIn('ark.workspace', {s['id'] for s in response.json()['skills']})
         web = next(item for item in response.json()["skills"] if item["id"] == "ark.web_search")
         self.assertTrue(web["isEnabled"])
 

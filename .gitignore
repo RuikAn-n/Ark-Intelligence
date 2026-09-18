@@ -31,5 +31,6 @@ build/
 *.app/
 # Execution journals and auth are local only
 .runtime/
+.hermes-lab/
 *.sqlite3-wal
 *.sqlite3-shm

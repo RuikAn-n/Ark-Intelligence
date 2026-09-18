@@ -30,6 +30,7 @@ struct ChatView: View {
             ChatInputView(viewModel: viewModel)
         }
         .navigationTitle("主对话")
+        .task { await viewModel.monitorExternalRuns() }
         .inspector(isPresented: $showsTaskPanel) {
             TaskPanelView(viewModel: viewModel)
                 .inspectorColumnWidth(min: 300, ideal: 360, max: 460)

@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Ark Intelligence 高层架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/RuikAn-n/Ark-Intelligence.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "6b900cd505eff2d1881dc993c9f4649381d74905"
+    },
+    "viewBox": [1380, 820],
+    "views": [
+      {
+        "id": "chat-path",
+        "label": "主交互链路",
+        "focus": ["user", "mac-client", "local-api", "agent", "ollama"],
+        "note": "用户请求从 macOS 客户端进入经认证的本地 API，由 Agent 调用本地模型。"
+      },
+      {
+        "id": "tool-path",
+        "label": "工具执行链路",
+        "focus": ["agent", "run-service", "skill-registry", "native-bridge", "mac-client"],
+        "note": "工具任务通过运行服务、技能注册表和受配对保护的原生桥接执行。"
+      },
+      {
+        "id": "memory-path",
+        "label": "记忆链路",
+        "focus": ["agent", "memory", "sqlite"],
+        "note": "Agent 检索和沉淀长期记忆；SQLite 持久化业务与运行状态。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "用户",
+      "sublabel": "本地交互",
+      "pos": [50, 370],
+      "size": [140, 68]
+    },
+    {
+      "id": "mac-client",
+      "type": "frontend",
+      "label": "macOS 客户端",
+      "sublabel": "SwiftUI · 语音 / 聊天 / 记忆",
+      "pos": [255, 370],
+      "size": [185, 68],
+      "sources": [{"path": "frontend/ArkIntelligence/App/ArkIntelligenceApp.swift"}]
+    },
+    {
+      "id": "local-api",
+      "type": "backend",
+      "label": "本地 API 服务",
+      "sublabel": "FastAPI · REST / SSE",
+      "tag": "本地令牌认证",
+      "pos": [545, 370],
+      "size": [175, 68],
+      "sources": [{"path": "backend/api/server.py"}]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "Ark Agent",
+      "sublabel": "对话编排 · 记忆检索 · 流式响应",
+      "pos": [825, 370],
+      "size": [205, 68],
+      "sources": [{"path": "backend/agent/core.py"}]
+    },
+    {
+      "id": "ollama",
+      "type": "external",
+      "label": "Ollama 本地模型",
+      "sublabel": "Qwen 3.5 默认模型",
+      "pos": [1135, 370],
+      "size": [180, 68],
+      "sources": [{"path": "backend/agent/run_service.py"}]
+    },
+    {
+      "id": "run-service",
+      "type": "backend",
+      "label": "任务运行服务",
+      "sublabel": "后台任务 · 审批 · 工具循环",
+      "pos": [825, 585],
+      "size": [205, 68],
+      "sources": [{"path": "backend/agent/run_service.py"}]
+    },
+    {
+      "id": "skill-registry",
+      "type": "backend",
+      "label": "技能注册表",
+      "sublabel": "清单校验 · 动作解析",
+      "pos": [545, 585],
+      "size": [175, 68],
+      "sources": [{"path": "backend/skills/registry.py"}]
+    },
+    {
+      "id": "native-bridge",
+      "type": "security",
+      "label": "原生能力桥接",
+      "sublabel": "配对客户端 · 执行预览",
+      "tag": "写操作需审批",
+      "pos": [255, 585],
+      "size": [185, 68],
+      "sources": [{"path": "backend/tools/native_bridge.py"}, {"path": "frontend/ArkIntelligence/Core/Native/NativeCapabilityHost.swift"}]
+    },
+    {
+      "id": "memory",
+      "type": "backend",
+      "label": "记忆子系统",
+      "sublabel": "写入 · 检索 · 合并",
+      "pos": [825, 150],
+      "size": [205, 68],
+      "sources": [{"path": "backend/memory/manager.py"}, {"path": "backend/memory/retriever.py"}]
+    },
+    {
+      "id": "sqlite",
+      "type": "database",
+      "label": "SQLite 持久化",
+      "sublabel": "记忆 · 会话 · 运行记录",
+      "pos": [1135, 150],
+      "size": [180, 68],
+      "sources": [{"path": "backend/memory/database.py"}, {"path": "backend/runtime/store.py"}]
+    },
+    {
+      "id": "native-os",
+      "type": "external",
+      "label": "macOS 原生服务",
+      "sublabel": "应用 · 日历 · 系统能力",
+      "pos": [50, 585],
+      "size": [140, 68],
+      "sources": [{"path": "frontend/ArkIntelligence/Core/Native/ApplicationCapability.swift"}, {"path": "frontend/ArkIntelligence/Core/Native/EventKitCapability.swift"}]
+    }
+  ],
+  "boundaries": [
+    {"kind": "region", "label": "Ark Intelligence 本地运行环境", "wraps": ["mac-client", "local-api", "agent", "run-service", "skill-registry", "native-bridge", "memory", "sqlite"], "pad": 35},
+    {"kind": "security-group", "label": "受信任的本地调用边界", "wraps": ["local-api", "native-bridge"], "pad": 22}
+  ],
+  "connections": [
+    {"id": "user-client", "from": "user", "to": "mac-client", "label": "语音 / 文本", "variant": "emphasis"},
+    {"id": "client-api", "from": "mac-client", "to": "local-api", "label": "REST · SSE", "variant": "emphasis"},
+    {"id": "api-agent", "from": "local-api", "to": "agent", "label": "聊天请求 / 流式事件", "variant": "emphasis"},
+    {"id": "agent-model", "from": "agent", "to": "ollama", "label": "本地推理", "variant": "emphasis"},
+    {"id": "agent-memory", "from": "agent", "to": "memory", "label": "检索 / 写入", "fromSide": "top", "toSide": "bottom"},
+    {"id": "memory-store", "from": "memory", "to": "sqlite", "label": "持久化"},
+    {"id": "api-run", "from": "local-api", "to": "run-service", "label": "技能任务", "fromSide": "bottom", "toSide": "top"},
+    {"id": "run-registry", "from": "run-service", "to": "skill-registry", "label": "解析动作", "fromSide": "left", "toSide": "right"},
+    {"id": "run-bridge", "from": "run-service", "to": "native-bridge", "label": "预览 / 审批 / 执行", "variant": "security", "fromSide": "bottom", "toSide": "bottom", "via": [[927.5, 720], [347.5, 720]], "labelAt": [640, 720]},
+    {"id": "bridge-client", "from": "native-bridge", "to": "mac-client", "label": "已配对的原生通道", "variant": "security", "fromSide": "top", "toSide": "bottom"},
+    {"id": "bridge-os", "from": "native-bridge", "to": "native-os", "label": "系统能力调用", "variant": "security"}
+  ],
+  "cards": [
+    {"dot": "cyan", "title": "主调用链", "items": ["用户 → SwiftUI 客户端 → FastAPI → Ark Agent → Ollama 本地模型", "聊天接口支持 REST 与 Server-Sent Events 流式响应"]},
+    {"dot": "emerald", "title": "状态与记忆", "items": ["记忆模块负责检索、写入与合并", "SQLite 保存记忆、会话和后台任务事件"]},
+    {"dot": "rose", "title": "外部依赖与安全", "items": ["外部依赖：Ollama 本地模型、macOS 系统服务", "本地 API 令牌认证；原生写操作经过预览与审批"]}
+  ]
+}
