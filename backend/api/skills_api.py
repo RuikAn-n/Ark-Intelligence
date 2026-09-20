@@ -63,20 +63,43 @@ def create_skill_router(agent,token):
     bridge=NativeBridge()
     service=RunService(store,registry,bridge,agent)
 
+    @router.on_event('shutdown')
+    async def shutdown():
+        tasks=list(service.tasks.values())
+        for task in tasks: task.cancel()
+        await asyncio.gather(*tasks,return_exceptions=True)
+        for run_id in list(service.hermes.workers): await service.hermes.close(run_id)
+
     def get_run(id):
         run=store.get_run(id)
         if not run: raise HTTPException(404,'任务不存在')
         return run
 
     @router.get('/skills')
-    def skills(): return {'skills':registry.listing(bridge.actions,bridge.permissions)}
+    async def skills():
+        await service.hermes.refresh()
+        return {'skills':registry.listing(bridge.actions,bridge.permissions)}
+
+    @router.get('/agent/capabilities')
+    async def capabilities():
+        await service.hermes.refresh()
+        return {'model':service.model, 'hermes': {
+            'configured':service.hermes.configured, 'enabled':store.enabled('ark.hermes'),
+            'error':service.hermes.error, 'skill_count':len(service.hermes.skills),
+            'tools':sorted(service.hermes.tools), 'workspace':str(service.hermes.cwd),
+        }, 'native_actions':sorted(bridge.actions), 'active_runs':len(service.tasks)}
 
     # Scoped integration routes deliberately expose no approval or enable/disable operation.
     @router.get('/integrations/hermes/skills')
-    def hermes_skills(): return skills()
+    def hermes_skills():
+        # The incoming bridge only sees Ark actions, never the reverse adapter.
+        return {'skills':[s for s in registry.listing(bridge.actions,bridge.permissions)
+                          if s['id'] != 'ark.hermes' and not s['id'].startswith('hermes.')]}
 
     @router.post('/integrations/hermes/runs',status_code=201)
     async def hermes_create(request:HermesActionRequest):
+        if request.action_id.replace('__', '.').startswith('hermes.'):
+            raise HTTPException(403,'桥接令牌不能调用 Hermes 反向执行器')
         request.session_id='hermes-'+request.session_id[:57]
         try: return service.create(request,source='hermes',request_id=request.request_id)
         except SkillError as exc: raise HTTPException(409,str(exc))
@@ -92,14 +115,17 @@ def create_skill_router(agent,token):
         return dict(run,calls=store.calls(id))
 
     @router.get('/skills/{id}')
-    def skill(id:str):
+    async def skill(id:str):
+        await service.hermes.refresh()
         for item in registry.listing(bridge.actions,bridge.permissions):
             if item['id']==id: return item
         raise HTTPException(404,'技能不存在')
 
     @router.patch('/skills/{id}')
     async def toggle(id:str,request:EnabledRequest):
-        if id not in registry.skills: raise HTTPException(404,'技能不存在')
+        if id not in registry.skills:
+            await service.hermes.refresh()
+            if not any(s['id'] == id for s in service.hermes.listing()): raise HTTPException(404,'技能不存在')
         store.set_enabled(id,request.enabled)
         if not request.enabled:
             for run_id in list(service.tasks):

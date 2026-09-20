@@ -186,12 +186,17 @@ struct Skill: Identifiable, Codable, Hashable {
     let requiredPermissions: [String]
     let permissionStatus: [String: String]
     let actions: [SkillAction]
+    var source: String? = nil
+    var category: String? = nil
+    var availabilityReason: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, version, name, description, icon, available, actions
         case isEnabled
         case requiredPermissions = "required_permissions"
         case permissionStatus = "permission_status"
+        case source, category
+        case availabilityReason = "availability_reason"
     }
 }
 

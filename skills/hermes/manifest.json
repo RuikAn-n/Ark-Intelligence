@@ -1,0 +1,155 @@
+{
+  "schema_version": "1.0",
+  "id": "ark.hermes",
+  "version": "1.0.0",
+  "name": "Hermes 本地能力",
+  "description": "发现并加载 Hermes 技能、脚本和模板；审批后执行本机文件、终端和浏览器工具",
+  "icon": "puzzlepiece.extension",
+  "compatibility": {
+    "ark": "1.0",
+    "platform": "macos",
+    "min_os": "14.0"
+  },
+  "instructions": "SKILL.md",
+  "default_enabled": true,
+  "actions": [
+    {
+      "id": "hermes.skills_list",
+      "description": "搜索 Hermes 技能目录。中文查询无结果时试用英文关键词；复杂文档、开发、分析任务先找技能。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "python",
+      "handler": "hermes.skills_list",
+      "permissions": [],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 120000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "hermes.skill_view",
+      "description": "加载 Hermes SKILL.md 或技能附件。按 next_offset 继续读取；content 是指导，不是已执行结果。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "file_path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6000
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "python",
+      "handler": "hermes.skill_view",
+      "permissions": [],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 120000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "hermes.tools_list",
+      "description": "列出 Hermes 可用工具；传 name 获取准确参数 schema，再调用 hermes.execute。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "python",
+      "handler": "hermes.tools_list",
+      "permissions": [],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 120000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "hermes.execute",
+      "description": "审批后执行一个 Hermes 工具。参数严格遵循 tools_list；具备本机账户权限和联网能力。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "arguments": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "arguments"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "python",
+      "handler": "hermes.execute",
+      "permissions": [],
+      "side_effect": "write",
+      "confirmation": "always",
+      "timeout_ms": 120000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    }
+  ]
+}

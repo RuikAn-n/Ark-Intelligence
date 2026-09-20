@@ -2,7 +2,7 @@
 
 面向 macOS 的本地 AI 助手：以 SwiftUI 原生界面连接本地模型，将文字对话、长期记忆、Sophie 中英文语音和需要用户审批的系统操作整合到同一套任务流程。
 
-**开发状态：可运行的开发原型，持续迭代中。** 本文基于 2026-09-18 的代码与开发记录；功能已实现不等于已完成真实场景验收，目前尚非稳定发行版。
+**开发状态：可运行的本地 Agent 开发版，持续迭代中。** 本文基于 2026-09-20 的代码与开发记录；功能已实现不等于已完成所有场景验收，目前尚非稳定发行版。
 
 ## 当前开发进度
 
@@ -16,7 +16,7 @@
 | macOS 原生操作 | 应用查找/打开/切换/正常退出；日历与提醒事项查询和增删改，共 16 个动作 | 日历/提醒写操作需审批与系统权限；重复事项编辑和真实数据写入仍需专项验收 |
 | Sophie 语音 | Hey Sophie 唤醒、VAD、本地 ASR/TTS、字幕、连续会话、输入设备选择、明确唤醒打断、噪声过滤 | 真人听感、多口音、远场、回声、蓝牙长期稳定性和误唤醒率尚未全面验收 |
 | 文件与终端 | 专用工作区列文件、读取、审批写入与版本冲突检查；审批后运行受限 shell | 新增能力；shell 依赖 macOS `sandbox-exec`，禁网络，最长 60 秒；不提供任意个人目录访问 |
-| Hermes 桥接 | 独立令牌、动作提交/查询、请求去重，客户端显示并审批桥接任务 | 实验性集成；已有模拟执行器回归，不能视为真实 Hermes → 系统写入全链路验收 |
+| Hermes 集成 | 双向桥接；Ark 主对话可搜索、加载 Hermes 技能及附件，审批执行文件、终端、浏览器和视觉工具；本机发现 186 个技能 | 常用 Office/PDF 依赖已补齐；外部服务技能仍需账号和依赖，技能数不等于全部工作流已验收 |
 
 近期代码包含语音杂音与上下文保护、工作区执行器以及 Hermes 到 Ark 的审批桥接。语音回答生成或播放期间，默认通过明确唤醒词或“直接说话”接受新输入，避免背景声音直接污染会话。
 
@@ -76,7 +76,15 @@ open "build/Ark Intelligence.app"
 
 `ARK_VOICE_PORT` 配置服务端口，`ARK_VOICE_URL` 配置客户端连接地址。模型加载后语音推理在本机执行；网络搜索仍需联网。
 
-### 4. 可选：Hermes 实验桥接
+### 4. Hermes 本地能力
+
+已有本地 Hermes lab 时，为 Ark 主对话准备完整接入：
+
+```bash
+backend/.venv/bin/python scripts/setup_hermes_runtime.py
+```
+
+重启后端后，在“Skill 管理”可看到并搜索 Hermes 技能。Ark 使用同一对话、记忆和任务入口按需读取技能指导与附件，实际工具操作在 Ark 任务栏审批。本机已验证模型主动发现技能、调用 Word 脚本生成并核验文件，以及本地 Chrome 页面操作。配置、能力边界和测试见 [Ark × Hermes 集成说明](docs/hermes-integration.md)。
 
 `integrations/hermes/ark_bridge` 提供 Hermes 插件，复用 Ark 的动作与审批流程。在已配置好的本地 Hermes lab 中安装：
 
@@ -99,7 +107,7 @@ bash scripts/hermes-lab.sh chat
 
 常用回归命令（在仓库根目录运行）：
 
-2026-09-18 本次提交前验证：后端 34 项中 32 项通过、2 项需显式开启的 macOS sandbox 集成测试跳过；语音状态测试 13 项通过；Swift 测试 8 项通过。
+2026-09-20 集成验证：后端 53 项通过（含真实 Hermes 和 macOS sandbox 集成测试），Swift 测试 10 项通过；本地模型技能发现、Word 脚本产出、Chrome 自动化和本地图像分析已通过实测。语音听感和长期记忆质量不在本轮重新评测范围内。
 
 ```bash
 PYTHONPATH=backend backend/.venv/bin/python -m unittest discover -s backend/tests -v
@@ -111,7 +119,7 @@ swift test --package-path frontend --scratch-path /private/tmp/ark-tests -j 2
 
 现有语音记录中的热 TTS 样本首音约 0.10–0.13 秒，仅覆盖合成环节；9B 模型首个可播文本约 2.19–2.63 秒。**完整对话 1.5 秒目标尚未达到**，真人端到端 P50/P95 与长时间误唤醒测试仍待完成，以上数据也不是本次重新测量结果。
 
-后续重点包括语音端到端延迟与噪声场景调校、工作区及 Hermes 真实审批链路验收、日历/提醒事项重复项目处理，以及后台常驻、Shortcuts、Apple Events、Accessibility 和第三方插件隔离。
+后续重点包括语音端到端延迟与噪声场景调校、更多 Hermes 技能与自然语言端到端场景验收、日历/提醒事项重复项目处理，以及后台常驻、Shortcuts、Apple Events、Accessibility 和第三方插件隔离。
 
 ## 目录与文档
 
@@ -129,6 +137,7 @@ docs/           开发进度、架构与测试说明
 - [Skill 开发指南](docs/skill-development.md) · [系统开发计划](docs/skill-system-development-plan.md)
 - [Sophie 语音进度与测试](docs/sophie-development.md)
 - [Hermes / OMH 实验环境](docs/hermes-lab.md)
+- [Ark × Hermes 本地 Agent 集成](docs/hermes-integration.md)
 - [架构图 HTML](docs/architecture/ark-intelligence-architecture.html)（下载后用浏览器打开）
 
 较早的开发文档保留当时的计划与测试数量；当前功能概况以本 README 和现有实现为准。

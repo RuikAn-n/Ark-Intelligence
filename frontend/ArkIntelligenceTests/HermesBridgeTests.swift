@@ -26,6 +26,14 @@ private final class ExternalRepository: ChatRepository {
 }
 
 final class HermesBridgeTests: XCTestCase {
+    func testHermesSkillMetadataDecodesWithEmptyActions() throws {
+        let data = Data(#"{"id":"hermes.skill.docx","version":"1.0.0","name":"docx","description":"Word documents","icon":"books.vertical","isEnabled":true,"available":true,"required_permissions":[],"permission_status":{},"actions":[],"source":"hermes","category":"productivity"}"#.utf8)
+        let skill = try JSONDecoder().decode(Skill.self, from: data)
+        XCTAssertEqual(skill.source, "hermes")
+        XCTAssertEqual(skill.category, "productivity")
+        XCTAssertTrue(skill.actions.isEmpty)
+    }
+
     @MainActor
     func testExternalApprovalAppearsWithoutResubmittingChat() async throws {
         let repository = ExternalRepository()

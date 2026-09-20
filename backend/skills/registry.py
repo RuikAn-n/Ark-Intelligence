@@ -12,6 +12,8 @@ class Registry:
     def __init__(self, root, store):
         self.store, self.skills, self.actions = store, {}, {}
         root = Path(root)
+        self.root = root
+        self.hermes = None
         schema=json.loads((root/'shared/skill-protocol/v1/manifest.schema.json').read_text())
         for path in sorted((root/'skills').glob('*/manifest.json')):
             raw=path.read_bytes()
@@ -45,7 +47,8 @@ class Registry:
     def tools(self, native_ids):
         return [{'type':'function','function':{'name':name,'description':action['description'],'parameters':action['input_schema']}}
                 for name,(skill,action) in self.actions.items() if self.store.enabled(skill['id']) and
-                (action['executor']=='python' or action['id'] in native_ids)]
+                (action['executor']=='python' or action['id'] in native_ids) and
+                (skill['id'] != 'ark.hermes' or (self.hermes is not None and self.hermes.configured and not self.hermes.error))]
 
     def listing(self, native_ids, permissions):
         items=[]
@@ -59,5 +62,10 @@ class Registry:
                 required_permissions=required,
                 permission_status={name: permissions.get(name, 'notDetermined') for name in required},
             )
+            if skill['id'] == 'ark.hermes':
+                item['source'] = 'hermes_runtime'
+                item['available'] = self.hermes is not None and self.hermes.configured and not self.hermes.error
+                item['availability_reason'] = (self.hermes.error if self.hermes else None) or ('Hermes 本地环境未配置' if not item['available'] else None)
             items.append(item)
+        if self.hermes: items.extend(self.hermes.listing())
         return items

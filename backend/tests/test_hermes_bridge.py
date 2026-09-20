@@ -33,6 +33,10 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(self.client.post('/runs/x/approvals',headers=self.auth,json={}).status_code,401)
         self.assertEqual(self.client.get('/integrations/hermes/skills',headers=self.auth).status_code,200)
         self.assertEqual(self.client.get('/integrations/hermes/skills',headers={**self.auth,'Origin':'http://evil.test'}).status_code,401)
+        self.assertEqual(self.client.get('/agent/capabilities',headers=self.auth).status_code,401)
+        for action in ('hermes.execute','hermes__execute'):
+            payload=self.payload('reverse-block');payload.update(action_id=action,arguments={'name':'terminal','arguments':{'command':'pwd'}})
+            self.assertEqual(self.client.post('/integrations/hermes/runs',headers=self.auth,json=payload).status_code,403)
 
     def test_request_is_deduplicated_and_status_has_executor_result(self):
         first=self.client.post('/integrations/hermes/runs',headers=self.auth,json=self.payload())

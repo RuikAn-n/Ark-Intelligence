@@ -1,0 +1,9 @@
+# Adapter validation plus local Office/PDF/data skills. Installed in Hermes' venv.
+jsonschema==4.26.0
+python-docx==1.2.0
+openpyxl==3.1.5
+pypdf==6.19.0
+reportlab==5.0.1
+python-pptx==1.0.2
+pandas==3.0.6
+matplotlib==3.11.2
