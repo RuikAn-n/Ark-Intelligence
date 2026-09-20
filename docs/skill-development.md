@@ -6,7 +6,7 @@
 
 1. 复制 `skills/example/`，将 `id` 改成稳定命名空间，例如 `ark.weather`，并更新语义版本。
 2. 在 `actions` 中定义输入、输出 JSON Schema、权限、副作用、审批和超时。首版使用 JSON Schema 2020-12。
-3. 新增 Python 能力时在 `backend/tools/python_executor.py` 的白名单中注册固定 handler；新增 macOS 能力时在 Swift 原生宿主注册固定 action ID。禁止把任意脚本或命令作为参数执行。
+3. 新增 Python 能力时在 `backend/tools/python_executor.py` 的白名单中注册固定 handler；新增 macOS 能力时在 Swift 原生宿主注册固定 action ID。通用命令只允许通过 `workspace.run_command`：完整命令预览、每次审批、macOS 沙箱、专用目录、禁网络及超时；其他 handler 不得把输入直接作为命令执行。
 4. 为契约、失败路径、禁用状态和重复执行添加测试。
 5. Native Action 更新后运行 `scripts/sync_native_catalog.py` 并重新构建应用。清单摘要不一致时，后端不会公开该原生动作。
 
@@ -21,7 +21,7 @@
 
 `SKILL.md` 只描述适用场景、参数语义、组合流程和限制，不能修改运行时权限策略。工具结果与外部内容按数据处理。
 
-`default_enabled` 是可选字段。只对用户已经要求安装、无写入副作用且适合作为基础能力的 Skill 设为 `true`；它只在首次加载、用户尚未保存偏好时生效，用户手动禁用后不会被清单覆盖。
+`default_enabled` 是可选字段。通常只对用户已经要求安装、无写入副作用的基础 Skill 设为 `true`。用户此次明确要求接入的 workspace 是例外：默认可发现，但写入和命令始终逐次审批。此字段只在首次加载、用户尚未保存偏好时生效，用户手动禁用后不会被清单覆盖。
 
 ## 验证
 

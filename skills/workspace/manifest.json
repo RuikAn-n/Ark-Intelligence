@@ -64,7 +64,7 @@
     },
     {
       "id": "workspace.write_file",
-      "description": "审批后创建或完整替换工作区文本文件；先 read_file 获取 expected_version，新建使用 absent",
+      "description": "只能在专用工作区（不是桌面）创建或替换文本文件，不能满足桌面路径请求；先 read_file 获取 expected_version，新建使用 absent",
       "input_schema": {
         "type": "object",
         "properties": {

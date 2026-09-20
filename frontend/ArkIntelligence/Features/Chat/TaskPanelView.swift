@@ -300,6 +300,10 @@ private struct SkillStepRow: View {
             "reminders.delete_reminder": "删除提醒",
             "web.search": "搜索互联网",
             "web.fetch_page": "读取网页",
+            "workspace.list_files": "查看工作区",
+            "workspace.read_file": "读取文件",
+            "workspace.write_file": "写入文件",
+            "workspace.run_command": "运行终端命令",
             "example.echo": "示例回显"
         ][activity.actionID] ?? activity.actionID
     }

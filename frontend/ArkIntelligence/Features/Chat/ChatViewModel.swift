@@ -67,6 +67,7 @@ final class ChatViewModel: ObservableObject {
                     streamTasks[localID] = Task { [weak self] in
                         await self?.consume(text: run.message, localID: localID, voice: false, onEvent: nil, externalID: run.id)
                     }
+                    pruneHistory()
                 }
             } catch { /* Backend reconnect is retried on the next bounded poll. */ }
             try? await Task.sleep(for: .seconds(3))

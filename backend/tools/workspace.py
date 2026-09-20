@@ -60,7 +60,8 @@ class WorkspaceExecutor:
                 version = hashlib.sha256(value).hexdigest() if value is not None else 'absent'
                 if args['expected_version'] != version:
                     raise SkillError('CONFLICT', '文件已变化，请重新读取并生成预览')
-                return {'summary': '创建或替换工作区文本文件', 'workspace': str(self.root),
+                return {'summary': '创建或替换工作区文本文件（不是桌面）', 'workspace': str(self.root),
+                        'absolute_path': str(self.root / args['path']),
                         'arguments': dict(args), 'version': version,
                         'before': value.decode('utf-8')[:6000] if value is not None else None,
                         'before_truncated': value is not None and len(value.decode('utf-8'))>6000}
@@ -100,7 +101,8 @@ class WorkspaceExecutor:
                     with contextlib.suppress(FileNotFoundError): os.unlink(temporary,dir_fd=fd)
                 actual=self.snapshot(fd,name)
                 if actual != raw: raise SkillError('RESULT_UNKNOWN','写入后校验不一致，请重新读取')
-                return {'path':args['path'],'version':hashlib.sha256(raw).hexdigest(),'bytes':len(raw),'verified':True}
+                return {'path':args['path'],'absolute_path':str(self.root / args['path']),'workspace':str(self.root),
+                        'location_scope':'workspace_only','version':hashlib.sha256(raw).hexdigest(),'bytes':len(raw),'verified':True}
         except (OSError, UnicodeError) as exc:
             raise SkillError('INVALID_ARGUMENT',str(exc)) from exc
 
@@ -109,9 +111,11 @@ class WorkspaceExecutor:
         escaped=str(self.root).replace('\\','\\\\').replace('"','\\"')
         return '''(version 1)
 (deny default)
+(import "dyld-support.sb")
 (allow process-fork process-exec sysctl-read)
 (allow signal (target same-sandbox))
 (allow file-read-metadata)
+(allow file-map-executable (subpath "/System") (subpath "/usr") (subpath "/bin") (subpath "/sbin"))
 (allow file-read* (subpath "/System") (subpath "/usr") (subpath "/bin") (subpath "/sbin") (subpath "/Library/Apple") (subpath "/private/etc") (subpath "/dev"))
 (allow file-write* (literal "/dev/null") (literal "/dev/tty"))
 (allow file-read* file-write* (subpath "''' + escaped + '''"))

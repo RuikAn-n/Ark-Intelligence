@@ -74,6 +74,18 @@ class ApprovalTests(unittest.IsolatedAsyncioTestCase):
         await self.wait_for("succeeded")
         self.assertEqual(self.bridge.executions, 1)
 
+    async def test_unverified_native_write_is_result_unknown(self):
+        original=self.bridge.request
+        async def unverified(envelope):
+            data=await original(envelope)
+            return {'verified':False} if envelope['operation']=='execute' else data
+        self.bridge.request=unverified
+        self.run=self.service.create(self.request)
+        pending=(await self.wait_for('waiting_approval'))['pending']
+        self.service.approve(self.run['id'],pending['call_id'],pending['digest'],True)
+        await self.wait_for('result_unknown')
+        self.assertEqual(self.bridge.executions,1)
+
     async def test_waiting_approval_does_not_block_another_background_run(self):
         self.run = self.service.create(self.request)
         await self.wait_for("waiting_approval")

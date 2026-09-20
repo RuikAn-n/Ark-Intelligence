@@ -26,7 +26,7 @@ open "build/Ark Intelligence.app"
 ## 自动测试
 
 ```bash
-PYTHONPATH=backend backend/.venv/bin/python -m unittest discover -s backend/tests -v
+PYTHONPATH=backend:. backend/.venv/bin/python -m unittest discover -s backend/tests -v
 swift test --package-path frontend --scratch-path /private/tmp/ark-skill-tests -j 2
 backend/.venv/bin/python scripts/smoke_test.py
 backend/.venv/bin/python scripts/model_smoke_test.py
@@ -68,3 +68,23 @@ backend/.venv/bin/python scripts/application_action_test.py
 测试日历写入时建议先在系统日历创建单独的“Ark 测试”日历，并明确告诉助手使用该日历。删除操作只对测试数据进行。
 
 验收时确认：没有启用技能时不会调用；目标重名会先询问；写操作必须出现预览；拒绝后没有变更；执行成功后能在系统应用中读回；应用存在未保存内容时只请求正常退出，不会强制终止。
+
+## Hermes 与工作区专项测试
+
+完整后端回归并实际启用 macOS 沙箱测试：
+
+```bash
+ARK_TEST_SANDBOX=1 PYTHONPATH=backend:. backend/.venv/bin/python -m unittest discover -s backend/tests -v
+swift test --package-path frontend --scratch-path /private/tmp/ark-skill-tests -j 2
+.hermes-lab/venv/bin/python scripts/install_hermes_bridge.py
+```
+
+启动方式见 [Hermes 测试环境](hermes-lab.md)。在新 Hermes 会话依次测试：
+
+1. “通过 Ark 查询提醒事项清单。”检查实际调用 `ark_reminders_*`。
+2. 明确指定一个私人测试清单，要求创建标题唯一的临时提醒；检查 Ark 主对话出现目标、标题和日期预览。确认前系统中不应出现该提醒。
+3. 确认后要求 Hermes 查询原任务状态并读回提醒；再删除同一测试提醒，确认清理结果。不要对原有数据做删除验收。
+4. 要求在 Ark 工作区创建一个新测试文件；检查预览并确认。读取文件后，再要求用 `cat` 读取同一文件，确认终端命令也必须单独审批。
+5. 拒绝一项写入，确认文件未变。审批期间手动修改目标文件，确认版本检查拒绝覆盖。
+
+`waiting_approval`、`preparing` 和 `result_unknown` 均不等于成功。发生响应中断时用已有 `run_id` 查询，不重复提交。终端退出码为零不代表所有业务目标完成，需要检查实际结果。

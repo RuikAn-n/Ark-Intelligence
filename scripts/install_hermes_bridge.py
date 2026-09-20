@@ -16,5 +16,11 @@ for name in ('reminders','calendar','applications','workspace'):
 path=home/'config.yaml';data=yaml.safe_load(path.read_text())
 enabled=data.setdefault('plugins',{}).setdefault('enabled',[])
 if 'ark-bridge' not in enabled: enabled.append('ark-bridge')
+# This profile uses Ark's native EventKit host, not the bundled remindctl skill.
+disabled=data.setdefault('skills',{}).setdefault('disabled',[])
+if 'apple-reminders' not in disabled: disabled.append('apple-reminders')
+# Local Qwen otherwise sees only discovery stubs and can choose a competing skill.
+data.pop('tool_search',None)
+data.setdefault('tools',{}).setdefault('tool_search',{})['enabled']='off'
 path.write_text(yaml.safe_dump(data,allow_unicode=True,sort_keys=False))
 print(f'Installed {len(actions)} Ark actions at {target}. Restart Hermes to load.')
