@@ -122,6 +122,8 @@ local_token = get_token()
 hermes_token = get_token('hermes-token')
 skill_router, run_service = create_skill_router(agent, local_token)
 app.include_router(skill_router)
+from api.notifications_api import create_notification_router
+app.include_router(create_notification_router(run_service))
 
 @app.middleware('http')
 async def local_auth(request: Request, call_next):

@@ -22,6 +22,10 @@ final class NativeCapabilityHost: ObservableObject {
     private let baseURL: URL
     private let applications = ApplicationCapability()
     private let eventKit = EventKitCapability()
+    private let notifications = NotificationCapability()
+    private var permissionStatus: [String: String] {
+        eventKit.permissionStatus.merging(["accessibility": NotificationCenterAXAdapter.isTrusted ? "authorized" : "notDetermined"]) { _, new in new }
+    }
     private var task: Task<Void, Never>?
     private var socket: URLSessionWebSocketTask?
     private var prepared: [String: PreparedNativeAction] = [:]
@@ -66,7 +70,7 @@ final class NativeCapabilityHost: ObservableObject {
         var request = URLRequest(url: url); request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         let socket = URLSession.shared.webSocketTask(with: request)
         self.socket = socket; socket.resume()
-        try await send(BridgeHello(protocolVersion: catalog.protocolVersion, actions: catalog.actions, digests: catalog.digests, permissions: eventKit.permissionStatus), over: socket)
+        try await send(BridgeHello(protocolVersion: catalog.protocolVersion, actions: catalog.actions, digests: catalog.digests, permissions: permissionStatus), over: socket)
         let ready = try await receiveDictionary(from: socket)
         guard ready["type"] as? String == "ready" else { throw NativeActionError(code: "CAPABILITY_UNAVAILABLE", message: "原生能力握手失败") }
         isConnected = true; lastError = nil
@@ -88,7 +92,7 @@ final class NativeCapabilityHost: ObservableObject {
                 let response = NativeResponse(messageID: request?.messageID ?? "", status: "failed", data: nil, error: NativeErrorBody(code: native?.code ?? "EXECUTION_FAILED", message: error.localizedDescription))
                 try await send(response, over: socket)
             }
-            try await send(BridgePermissions(permissions: eventKit.permissionStatus), over: socket)
+            try await send(BridgePermissions(permissions: permissionStatus), over: socket)
         }
     }
 
@@ -98,6 +102,7 @@ final class NativeCapabilityHost: ObservableObject {
             prepared = prepared.filter { $0.value.expiresAt > Date() }
             let value: (preview: [String: JSONValue], read: [String: JSONValue]?)
             if request.actionID.hasPrefix("applications.") { value = try await applications.prepare(action: request.actionID, arguments: request.arguments) }
+            else if request.actionID == "notifications.capture" { value = notifications.prepare() }
             else { value = try await eventKit.prepare(action: request.actionID, arguments: request.arguments) }
             let token = UUID().uuidString
             prepared[token] = PreparedNativeAction(actionID: request.actionID, arguments: request.arguments, expiresAt: Date().addingTimeInterval(300), readResult: value.read)
@@ -109,6 +114,7 @@ final class NativeCapabilityHost: ObservableObject {
         }
         let result: [String: JSONValue]
         if request.actionID.hasPrefix("applications.") { result = try await applications.execute(action: request.actionID, arguments: request.arguments, readResult: item.readResult) }
+        else if request.actionID == "notifications.capture" { result = try await notifications.execute() }
         else { result = try await eventKit.execute(action: request.actionID, arguments: request.arguments, readResult: item.readResult) }
         return NativeResponse(messageID: request.messageID, status: "succeeded", data: result, error: nil)
     }

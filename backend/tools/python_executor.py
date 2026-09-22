@@ -13,6 +13,10 @@ class PythonExecutor:
         self.network_slots=asyncio.Semaphore(max(1,min(max_network_concurrency,2)))
 
     async def execute(self, handler, arguments):
+        if handler == 'notifications.query':
+            from runtime.notification_events import EventStore, EventRange
+            from runtime.security import runtime_dir
+            return await asyncio.to_thread(EventStore(runtime_dir() / 'notifications.sqlite3').query, EventRange(**arguments))
         if handler.startswith('workspace.'):
             return await self.workspace.execute(handler,arguments)
         if handler=='example.echo':

@@ -95,7 +95,8 @@
             "items": {
               "enum": [
                 "calendar",
-                "reminders"
+                "reminders",
+                "accessibility"
               ]
             }
           },

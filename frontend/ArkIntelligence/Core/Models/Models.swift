@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 enum SidebarDestination: Hashable {
-    case chat, voice, memoryOverview, memoryManager, history, skills
+    case notifications, chat, voice, memoryOverview, memoryManager, history, skills
 }
 
 enum MessageRole: String, Codable {

@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "id": "ark.notifications",
+  "version": "1.0.0",
+  "name": "通知感知与总结",
+  "description": "手动采集 Mac 通知中心可读取的通知，按接收时间查询本地 Ark Event；支持微信等应用。",
+  "icon": "bell.badge",
+  "compatibility": {
+    "ark": "1.0",
+    "platform": "macos",
+    "min_os": "14.0"
+  },
+  "instructions": "SKILL.md",
+  "default_enabled": false,
+  "actions": [
+    {
+      "id": "notifications.capture",
+      "description": "经用户确认后采集当前通知中心并保存到 Ark 本机。无法恢复已清除通知。",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "native",
+      "handler": "notifications.capture",
+      "permissions": [
+        "accessibility"
+      ],
+      "side_effect": "read",
+      "confirmation": "always",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    },
+    {
+      "id": "notifications.query",
+      "description": "按接收时间查询已手动采集的通知，未知时间不计入。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source_app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "executor": "python",
+      "handler": "notifications.query",
+      "permissions": [],
+      "side_effect": "read",
+      "confirmation": "none",
+      "timeout_ms": 60000,
+      "retry_policy": "never",
+      "idempotency": "journal"
+    }
+  ]
+}

@@ -14,6 +14,10 @@ struct ContentView: View {
                     Label("语音对话", systemImage: "waveform")
                         .tag(SidebarDestination.voice)
                 }
+                Section("通知") {
+                    Label("智能总结", systemImage: "bell.badge")
+                        .tag(SidebarDestination.notifications)
+                }
                 Section("记忆") {
                     Label("记忆概览", systemImage: "brain")
                         .tag(SidebarDestination.memoryOverview)
@@ -33,12 +37,18 @@ struct ContentView: View {
             .listStyle(.sidebar)
         } detail: {
             switch selection ?? .chat {
+            case .notifications: NotificationSummaryView(viewModel: appState.notificationViewModel)
             case .chat: ChatView(viewModel: appState.chatViewModel)
             case .voice: VoiceConversationView(viewModel: appState.voiceViewModel)
             case .memoryOverview: MemoryOverviewView(memories: appState.chatViewModel.currentRetrievedMemories)
             case .memoryManager: MemoryManagerView(viewModel: appState.memoryViewModel)
             case .history: ConversationHistoryView(viewModel: appState.historyViewModel, chatViewModel: appState.chatViewModel, selection: $selection)
             case .skills: SkillListView(viewModel: appState.skillViewModel)
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("智能总结", systemImage: "sparkles") { selection = .notifications }
             }
         }
         .background(WindowActivationView())

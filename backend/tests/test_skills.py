@@ -23,7 +23,7 @@ class SkillContractTests(unittest.TestCase):
 
     def test_all_manifests_load_and_actions_are_unique(self):
         self.assertEqual(set(self.registry.skills), {
-            "ark.applications", "ark.calendar", "ark.reminders", "ark.example", "ark.web_search", "ark.workspace", "ark.hermes"
+            "ark.applications", "ark.calendar", "ark.reminders", "ark.example", "ark.web_search", "ark.workspace", "ark.hermes", "ark.notifications"
         })
         action_ids = [action["id"] for _, action in self.registry.actions.values()]
         self.assertEqual(len(action_ids), len(set(action_ids)))

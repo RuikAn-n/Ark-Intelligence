@@ -1,11 +1,15 @@
 import Foundation
 
 enum APIEndpoint {
+    case notificationCapture, notificationSummary, notificationHistory
     case chat, chatStream, sessionEnd, memories, memory(id: Int), conversations, skills
     case skill(id: String), runs, run(id: String), runEvents(id: String), runApproval(id: String), runCancel(id: String), sessionsEnd, externalRuns
 
     var path: String {
         switch self {
+        case .notificationCapture: "/notifications/capture"
+        case .notificationSummary: "/notifications/summary"
+        case .notificationHistory: "/notifications"
         case .chat: "/chat"
         case .chatStream: "/chat/stream"
         case .sessionEnd: "/session/end"

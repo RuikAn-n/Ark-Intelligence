@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-skills = ["applications", "calendar", "reminders"]
+skills = ["applications", "calendar", "reminders", "notifications"]
 digests, actions = {}, []
 for name in skills:
     path = ROOT / "skills" / name / "manifest.json"

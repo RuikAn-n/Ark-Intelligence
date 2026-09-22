@@ -7,6 +7,7 @@ final class AppState: ObservableObject {
     let historyViewModel: HistoryViewModel
     let skillViewModel: SkillViewModel
     let voiceViewModel: VoiceViewModel
+    let notificationViewModel: NotificationSummaryViewModel
     let nativeCapabilityHost: NativeCapabilityHost
 
     init() {
@@ -19,6 +20,7 @@ final class AppState: ObservableObject {
         skillViewModel = SkillViewModel(repository: LiveSkillRepository(baseURL: apiURL))
         let voiceURL = URL(string: ProcessInfo.processInfo.environment["ARK_VOICE_URL"] ?? "http://127.0.0.1:8766")!
         voiceViewModel = VoiceViewModel(service: LiveVoiceService(baseURL: voiceURL, apiURL: apiURL), chat: chatViewModel)
+        notificationViewModel = NotificationSummaryViewModel(baseURL: apiURL)
         nativeCapabilityHost = NativeCapabilityHost(baseURL: apiURL)
         nativeCapabilityHost.start()
     }
