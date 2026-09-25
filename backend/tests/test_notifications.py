@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from api.notifications_api import NotificationSummarizer, create_notification_router
+from api.notifications_api import NotificationSummarizer, create_notification_router, NO_RELEVANT_NOTIFICATIONS, is_obvious_noise
 from runtime.notification_events import ArkEvent, EventRange, EventStore
 
 
@@ -69,6 +69,13 @@ class EventTests(unittest.TestCase):
 
 
 class SummaryTests(unittest.IsolatedAsyncioTestCase):
+    @staticmethod
+    def decisions(summary):
+        def respond(**kwargs):
+            items = json.loads(kwargs['messages'][1]['content'])
+            return {'message': {'content': json.dumps({'decisions': [dict(id=item['id'], summary=summary(item['id'])) for item in items]})}}
+        return respond
+
     async def test_empty_never_loads_model(self):
         client = SimpleNamespace(chat=AsyncMock())
         result = await NotificationSummarizer('local', asyncio.Lock(), client).summarize([])
@@ -76,7 +83,7 @@ class SummaryTests(unittest.IsolatedAsyncioTestCase):
         client.chat.assert_not_awaited()
 
     async def test_batches_cover_every_event_without_tools(self):
-        client = SimpleNamespace(chat=AsyncMock(return_value={'message':{'content':'合成测试摘要'}}))
+        client = SimpleNamespace(chat=AsyncMock(side_effect=self.decisions(lambda _: '合成测试摘要')))
         local = AsyncMock()
         response = SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'model_info':{'general.architecture':'qwen'}})
         local.__aenter__.return_value.post.return_value = response
@@ -89,7 +96,41 @@ class SummaryTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn('tools', call.kwargs)
             observed.extend(json.loads(call.kwargs['messages'][1]['content']))
         self.assertEqual([x['id'] for x in observed], ['0','1','2'])
-        self.assertIn('第 3 组', result)
+        self.assertIn('合成测试摘要 [2]', result)
+
+    async def test_short_notifications_are_bounded_per_batch(self):
+        client = SimpleNamespace(chat=AsyncMock(side_effect=self.decisions(lambda _: '')))
+        local = AsyncMock()
+        local.__aenter__.return_value.post.return_value = SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'model_info': {'architecture': 'qwen'}})
+        events = [dict(id=str(i), source_app='测试', title='合成', body='内容', occurred_at='2026-09-24T00:00:00Z', time_precision='exact') for i in range(17)]
+        with patch('api.notifications_api.httpx.AsyncClient', return_value=local):
+            await NotificationSummarizer('local', asyncio.Lock(), client).summarize(events)
+        batches = [json.loads(call.kwargs['messages'][1]['content']) for call in client.chat.await_args_list]
+        self.assertTrue(all(len(batch) <= 8 for batch in batches))
+        self.assertEqual([event['id'] for batch in batches for event in batch], [str(i) for i in range(17)])
+
+    async def test_filtered_batches_do_not_show_empty_sections(self):
+        client = SimpleNamespace(chat=AsyncMock(side_effect=self.decisions(lambda event_id: '需要回复项目排期' if event_id == '1' else '')))
+        local = AsyncMock()
+        local.__aenter__.return_value.post.return_value = SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'model_info': {'architecture': 'qwen'}})
+        events = [dict(id=str(i), source_app='微信', title='合成数据', body='a'*3000, occurred_at='2026-09-24T00:00:00Z', time_precision='exact') for i in range(2)]
+        with patch('api.notifications_api.httpx.AsyncClient', return_value=local):
+            result = await NotificationSummarizer('local', asyncio.Lock(), client).summarize(events)
+        self.assertEqual(result, '需要回复项目排期 [1]')
+        client.chat = AsyncMock(side_effect=self.decisions(lambda _: ''))
+        with patch('api.notifications_api.httpx.AsyncClient', return_value=local):
+            result = await NotificationSummarizer('local', asyncio.Lock(), client).summarize(events)
+        self.assertEqual(result, NO_RELEVANT_NOTIFICATIONS)
+
+    async def test_missing_duplicate_and_unknown_decisions_are_rejected(self):
+        local = AsyncMock()
+        local.__aenter__.return_value.post.return_value = SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'model_info': {'architecture': 'qwen'}})
+        events = [dict(id=str(i), source_app='测试', title='合成', body='', occurred_at='2026-09-24T00:00:00Z', time_precision='exact') for i in range(2)]
+        for ids in [[], ['0'], ['0', '0'], ['0', 'invented']]:
+            client = SimpleNamespace(chat=AsyncMock(return_value={'message': {'content': json.dumps({'decisions': [dict(id=i, summary='') for i in ids]})}}))
+            with patch('api.notifications_api.httpx.AsyncClient', return_value=local):
+                with self.assertRaises(RuntimeError):
+                    await NotificationSummarizer('local', asyncio.Lock(), client).summarize(events)
 
     async def test_remote_model_rejected_before_content_sent(self):
         client = SimpleNamespace(chat=AsyncMock())
@@ -99,6 +140,20 @@ class SummaryTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(RuntimeError):
                 await NotificationSummarizer('alias', asyncio.Lock(), client).summarize([{'id':'1'}])
         client.chat.assert_not_awaited()
+
+
+class RelevanceRulesTests(unittest.TestCase):
+    def test_obvious_promotions_without_blocking_real_account_alerts(self):
+        for title, body in [('过期提醒', '您的5次免费试用机会23:59过期'), ('医保账户', '账户余额、缴费记录更新速览>>')]:
+            self.assertTrue(is_obvious_noise(dict(source_app='支付宝', title=title, body=body)))
+        for title, body in [('账户安全', '陌生设备登录'), ('账单', '还款200元'), ('流量', '流量剩余0GB，继续按量收费')]:
+            self.assertFalse(is_obvious_noise(dict(source_app='支付宝', title=title, body=body)))
+
+    def test_generic_previews_and_voluntary_hobby_rollcalls(self):
+        for title, body in [('放假通知', '国务院办公厅发布放假通知'), ('地震', '震中位于我国...'), ('活动', '#接龙 有时间来踢球')]:
+            self.assertTrue(is_obvious_noise(dict(source_app='未知应用', title=title, body=body)))
+        for title, body in [('地震预警', '您所在地预计10秒后有震感，请立即避险'), ('课程安排', '本班节后第一节课改为线上'), ('考勤', '#接龙 请所有员工完成到岗签到')]:
+            self.assertFalse(is_obvious_noise(dict(source_app='未知应用', title=title, body=body)))
 
 
 class NotificationAPITests(unittest.TestCase):

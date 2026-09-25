@@ -38,10 +38,15 @@ final class NotificationSummaryViewModel: ObservableObject {
             defer { isBusy = false; task = nil }
             do {
                 struct SkillStatus: Decodable { let isEnabled: Bool }
-                let skill: SkillStatus = try await client.request(.skill(id: "ark.notifications"))
+                let skill: SkillStatus
+                do {
+                    skill = try await client.request(.skill(id: "ark.notifications"))
+                } catch APIError.server(let detail) where detail == "技能不存在" {
+                    throw APIError.server("当前后端尚未加载通知技能。更新代码后请重启 Ark 后端，再到 Skill 管理启用“通知感知与总结”。如果已重启，请检查客户端连接的后端地址。")
+                }
                 guard skill.isEnabled else { throw APIError.server("请先在 Skill 管理启用“通知感知与总结”。") }
                 if capture {
-                    progress = "正在读取通知中心…"
+                    progress = "正在自动展开通知分组并滚动采集…"
                     let captured = try await adapter.capture()
                     warning = captured.warning
                     struct CapturePayload: Encodable { let events: [ArkNotificationEvent] }
@@ -87,7 +92,7 @@ struct NotificationSummaryView: View {
             VStack(alignment: .leading, spacing: 18) {
                 Text("将分散的通知整理成一份摘要")
                     .font(.title2.bold())
-                Text("选择时间段，手动读取通知中心，再由本地模型整理重点与待办。微信和其他应用共用同一采集流程。")
+                Text("选择时间段，点击一次即可自动展开并采集通知，再由本地模型筛除广告和无关资讯，整理相关消息与待办。")
                     .foregroundStyle(.secondary)
                 GroupBox {
                     VStack(alignment: .leading, spacing: 12) {
@@ -104,7 +109,7 @@ struct NotificationSummaryView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }.padding(8)
                 }.disabled(viewModel.isBusy)
-                Toggle("允许本次手动采集，并将通知保存在本机供总结", isOn: $viewModel.consent)
+                Toggle("允许本次自动展开、滚动采集，并将通知保存在本机供总结", isOn: $viewModel.consent)
                     .disabled(viewModel.isBusy)
                 HStack {
                     Button("辅助功能授权", systemImage: "hand.raised") { NotificationCenterAXAdapter.requestPermission() }
@@ -114,7 +119,7 @@ struct NotificationSummaryView: View {
                         .buttonStyle(.borderedProminent)
                         .disabled(!viewModel.consent)
                 }.disabled(viewModel.isBusy || !viewModel.validRange)
-                Text("第一阶段不会常驻监听。只能读取通知中心暴露的内容，已清除、折叠和隐藏预览的通知可能缺失。请展开所需通知分组；时间不明的内容不会计入时间段摘要。本机记录保留 30 天，可随时清空。")
+                Text("第一阶段不会常驻监听。只能读取通知中心暴露的内容，Ark 会尝试自动展开分组并滚动加载；采集期间请勿操作通知中心。已清除、无法自动展开和隐藏预览的通知可能缺失；时间不明的内容不会计入时间段摘要。本机记录保留 30 天，可随时清空。")
                     .font(.callout).foregroundStyle(.secondary)
                 if viewModel.isBusy {
                     HStack { ProgressView().controlSize(.small); Text(viewModel.progress) }
@@ -123,7 +128,7 @@ struct NotificationSummaryView: View {
                 if let error = viewModel.error { Text(error).foregroundStyle(.red).textSelection(.enabled) }
                 if let result = viewModel.result {
                     Divider()
-                    Text("\(result.total) 条通知 · \(result.model)").font(.headline)
+                    Text("\(result.total) 条候选通知 · \(result.model)").font(.headline)
                     Text(result.coverage).font(.caption).foregroundStyle(.secondary)
                     if result.unknown_time_count > 0 {
                         Text("此期间采集的另有 \(result.unknown_time_count) 条通知时间不明，未纳入摘要。")

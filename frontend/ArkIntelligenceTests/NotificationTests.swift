@@ -62,6 +62,41 @@ final class NotificationTests: XCTestCase {
         XCTAssertEqual(NotificationCardParser.time("2 hours ago", now: now), now.addingTimeInterval(-7200))
     }
 
+    func testCalendarTimesAndInvalidLabels() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!
+        let reference = ISO8601DateFormatter().date(from: "2026-09-24T02:19:00Z")!
+        let expected = ISO8601DateFormatter().date(from: "2026-09-23T12:40:00Z")!
+        for label in ["昨天 20:40", "yesterday 20:40", "2026-09-23 20:40", "2026/09/23 20:40", "2026年9月23日 20:40", "9月23日 20:40"] {
+            XCTAssertEqual(NotificationCardParser.time(label, now: reference, calendar: calendar), expected, label)
+        }
+        XCTAssertEqual(NotificationCardParser.time("09:30", now: reference, calendar: calendar), ISO8601DateFormatter().date(from: "2026-09-24T01:30:00Z"))
+        for label in ["昨天", "2天前", "12:00", "昨天 25:00", "2026-02-30 09:00", "2026-09-23 20:40 开会"] {
+            XCTAssertNil(NotificationCardParser.time(label, now: reference, calendar: calendar), label)
+        }
+    }
+
+    func testMirroredTimestampRequiresIndependentDescription() {
+        let node = NotificationAXNode(role: "AXGroup", subrole: "AXNotificationCenterAlert", label: "微信，测试联系人，下午讨论项目", children: [
+            NotificationAXNode(role: "AXStaticText", identifier: "title", value: "测试联系人 下午讨论项目 5分钟前")
+        ])
+        let event = NotificationCardParser.parse(node, now: now).first!
+        XCTAssertEqual(event.source_app, "微信")
+        XCTAssertEqual(event.title, "测试联系人 下午讨论项目")
+        XCTAssertEqual(event.time_label, "5分钟前")
+        XCTAssertEqual(event.occurred_at, now.addingTimeInterval(-300).ISO8601Format())
+        var deadline = node
+        deadline.label = "微信，测试联系人，会议时间 09:00"
+        deadline.children[0].value = "测试联系人 会议时间 09:00"
+        let unchanged = NotificationCardParser.parse(deadline, now: now).first!
+        XCTAssertNil(unchanged.occurred_at)
+        XCTAssertEqual(unchanged.title, deadline.children[0].value)
+        var body = card()
+        body.children.removeLast()
+        body.children[2].value = "09:00"
+        XCTAssertNil(NotificationCardParser.parse(body, now: now).first!.occurred_at)
+    }
+
     func testIngestEncodingOmitsServerAssignedID() throws {
         let event = NotificationCardParser.parse(card(), now: now).first!
         let data = try JSONEncoder().encode(event)
